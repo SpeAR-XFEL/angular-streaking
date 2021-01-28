@@ -15,8 +15,6 @@ phi=np.pi
 t_offset=0e-15     
 
 # generate time-energy map of the photoelectrons
-timestep=1e-16
-
 Ekin_mu_list=[300,300]
 Ekin_sigma_list=[2,0.6]
 times_mu_list=[-2e-15,0]
