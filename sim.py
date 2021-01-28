@@ -6,7 +6,7 @@ import scipy.optimize
 
 def rejection_sampling(pdf, parameter_range, samples):
     # Funny solution I guess...
-    # Worst case run-time is infinite.
+    # Worst case run-time is infinite, but that’s improbable.
 
     # Find global maximum of target PDF to scale the uniform distribution.
     M = -1.01 * scipy.optimize.shgo(lambda x: -pdf(x), (parameter_range,), iters=8).fun
@@ -32,6 +32,17 @@ def ionize(β, IX, EX, EB, E_range, t_range, electrons):
     E = rejection_sampling(EX, E_range, electrons) - EB
     return ϑ, ψ, t0, E
 
+#def ɛ0_Gauss(E0, r, z, t):
+#    E0 * 
+#      central_E_field=E0*w0_x/(w_x(Zdif_x))
+#      offaxis_pulsed_factor=np.exp(-(Y/w_y(Zdif_y))**2-(X/w_x(Zdif_x))**2-((Z-Zlas)/(2*sigma_z))**2)
+#      phase=k*(Z-z_start)-omega*T+k/2*X**2/R_x+k/2*Y**2/R_y-0.5*np.arctan(Zdif_x/zRx)-0.5*np.arctan(Zdif_y/zRy)+phi
+#      polarization_vec=np.vstack((np.cos(phase),np.sin(phase),np.zeros(len(phase))))
+#      return central_E_field*offaxis_pulsed_factor*polarization_vec
+
+def streak(ϑ, ψ, t0, E, ɛ, ω):
+    A = -ɛ(t0) / ω * np.sin(ω)
+
 
 def histogram(samples, pdf=None):
     x = np.linspace(samples.min(), samples.max(), 100)
@@ -48,9 +59,9 @@ if __name__ == "__main__":
     XFEL_intensity = lambda t: (0.6 * scipy.stats.norm(0, 1e-15).pdf(t) + 
                                 0.4 * scipy.stats.norm(3e-15, 1e-15).pdf(t))
     
-    XFEL_photon_energy = scipy.stats.norm(914, 2).pdf
+    XFEL_photon_energy = scipy.stats.norm(914, 0.3).pdf
 
-    ϑ, ψ, t0, E = ionize(
+    photoelectrons = ionize(
         2, # β
         XFEL_intensity, 
         XFEL_photon_energy, 
@@ -59,22 +70,23 @@ if __name__ == "__main__":
         (-5e-15, 7e-15), # considered time range
         100000 # number of electrons to generate (not yet based on cross section)
     )
+    ϑ, ψ, t0, E = photoelectrons
     # histogram(t0, XFEL_intensity)
     # histogram(E)
 
     # Plotting
     
-    ax = plt.subplot(111, projection='polar')
+    ax = plt.subplot(111)#, projection='polar')
     H, xedges, yedges = np.histogram2d(ϑ, E, bins=(np.linspace(-np.pi, np.pi, 50+1), 50))
     ax.pcolormesh(*np.meshgrid(xedges, yedges), H.T, snap=True)
     hist1d = H.T.sum(axis=0)
     hist1d /= hist1d.max()
     ax.plot(xedges[:-1] + (xedges[1]-xedges[0])/2, hist1d * (yedges[-1]-yedges[0]) + yedges[0], 'C3.')
-    #ax.set_xlabel('ϑ / rad')
-    #ax.set_ylabel('E / eV')
+    ax.set_xlabel('ϑ / rad')
+    ax.set_ylabel('E / eV')
     ax.set_ylim(yedges[0], yedges[-1])
-    ax.tick_params(axis='y', colors='white')
-    plt.setp(ax.get_yticklabels(), alpha=0.7)
+    #ax.tick_params(axis='y', colors='white')
+    #plt.setp(ax.get_yticklabels(), alpha=0.7)
     #ax.spines['end']  .set_color('white')
     #ax.spines['start'].set_color('white')
     ax.grid(True, alpha=0.25)
