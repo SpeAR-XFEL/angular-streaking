@@ -57,7 +57,7 @@ def interaction_step(
    
    laserE=laser_field(elec[0,:],elec[1,:],elec[2,:],t)
    laserB=np.cross([0,0,1],laserE.T)/c
-   F_lor=e_charge*(laserE+np.cross(p_vec_list.T,laserB).T/e_m/gamma_list)
+   F_lor=-e_charge*(laserE+np.cross(p_vec_list.T,laserB).T/e_m/gamma_list)
    dp_vec_list=F_lor*tstep
    p_vec_list_new=p_vec_list+dp_vec_list
 
@@ -79,7 +79,7 @@ def generate_electron(
       ):
    elecs=np.zeros((6,num))
    beta=2
-   pdf_theta=lambda theta: 1+beta/2 * (3*np.sin(theta)**2-1)
+   pdf_theta=lambda theta: 1+beta/2 * (3*np.cos(theta)**2-1)
    for i in range(num):
       Ekin=rejection_sampling(pdf_Ekin,1,Ekin_limits)*e_charge
       p_abs=np.sqrt(2*e_m*Ekin)  # classical mechanics
