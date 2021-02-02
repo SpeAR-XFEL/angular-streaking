@@ -96,9 +96,9 @@ class SimpleGaussianBeam:
 
         Returns
         -------
-        E : (..., N, 3) array_like
+        E : (..., 3) array_like
             Electric field vectors.
-        B : (..., N, 3) array_like
+        B : (..., 3) array_like
             Magnetic field vectors.
         """
         x = np.asarray(x)
@@ -106,6 +106,7 @@ class SimpleGaussianBeam:
         z = np.asarray(z)
         assert x.shape == y.shape == z.shape
         t = np.asarray(t)
+        assert t.shape == () or t.shape == x.shape
 
         # Distance of electron to focus (mod1_center)
         Zdif_x = z - self.focal_point[0]
@@ -117,8 +118,8 @@ class SimpleGaussianBeam:
 
         # Position of the laser pulse center
         Zlas = const.c * (t + self.envelope_offset)
-        R_x = Zdif_x + (self.zRx**2 / Zdif_x)
-        R_y = Zdif_y + (self.zRy**2 / Zdif_y)
+        R_x = Zdif_x + (self.zRx ** 2 / Zdif_x)
+        R_y = Zdif_y + (self.zRy ** 2 / Zdif_y)
 
         central_E_field = self.E0 * self.w0_x / w_x
         offaxis_pulsed_factor = np.exp(
@@ -139,5 +140,4 @@ class SimpleGaussianBeam:
         )
 
         E_field = central_E_field * offaxis_pulsed_factor * polarization_vec
-        return E_field, np.cross([0, 0, 1], E_field.T) / const.c
-    
+        return E_field.T, np.cross([0, 0, 1], E_field.T) / const.c
