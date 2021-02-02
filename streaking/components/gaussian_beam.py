@@ -4,12 +4,12 @@ import scipy.constants as const
 
 class SimpleGaussianBeam:
     """Calculates electric and magnetic field of a simple
-    gaussian laser beam.
+    gaussian laser beam on the z axis.
 
     Methods
     -------
-    electric_field(r, t)
-        Calculates the electric field of the gaussian beam
+    fields(self, x, y, z, t)
+        Calculates the electric and magnetic fields of the gaussian beam
         at every given position and time.
     """
 
@@ -23,12 +23,13 @@ class SimpleGaussianBeam:
         M2=1.0,
         energy=30 * 1e-6,
         duration=300e-15,
+        polarization=(0, 0, 1),
     ):
         """
         Parameters
         ----------
         focal_point : tuple of scalar
-            Transverse coordinates of focal point.
+            Longitudinal coordinatess of x and y focal points.
         focal_size : tuple of scalar
             Focal sizes (standard deviaton) in the transverse plane.
         envelope_offset: scalar
@@ -45,9 +46,12 @@ class SimpleGaussianBeam:
             Pulse energy in Joules.
         duration: scalar
             FWHM pulse duration in seconds.
+        polarization: tuple of scalar
+            Normed Stokes vector (S1, S2, S3), defaults to right-hand circular polarization.
         """
         assert len(focal_point) == 2
         assert len(focal_size) == 2
+        assert len(polarization) == 3
 
         self.focal_point = focal_point
         self.cep = cep
@@ -73,6 +77,7 @@ class SimpleGaussianBeam:
             )
         )
         self.envelope_offset = envelope_offset
+        self.polarization = polarization
 
     def fields(self, x, y, z, t):
         """Calculates the electric and magnetic fields of the gaussian beam
@@ -128,6 +133,7 @@ class SimpleGaussianBeam:
             - 0.5 * np.arctan(Zdif_y / self.zRy)
             + self.cep
         )
+        # TODO: Implement Stokes vector.
         polarization_vec = np.vstack(
             (np.cos(phase), np.sin(phase), np.zeros_like(phase))
         )
