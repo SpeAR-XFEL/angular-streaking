@@ -29,7 +29,7 @@ class SimpleGaussianBeam:
         Parameters
         ----------
         focal_point : tuple of scalar
-            Longitudinal coordinatess of x and y focal points.
+            Longitudinal coordinates of hor. and ver. focal point.
         focal_size : tuple of scalar
             Focal sizes (standard deviaton) in the transverse plane.
         envelope_offset: scalar
@@ -91,8 +91,8 @@ class SimpleGaussianBeam:
             y coordinates.
         z : array_like
             z coordinates.
-        t : array_like
-            Time array.
+        t : array_like or scalar
+            Time. Either defined for each set of x,y,z or scalar.
 
         Returns
         -------
@@ -117,8 +117,8 @@ class SimpleGaussianBeam:
 
         # Position of the laser pulse center
         Zlas = const.c * (t + self.envelope_offset)
-        R_x = Zdif_x * (1 + (self.zRx / Zdif_x) ** 2)
-        R_y = Zdif_y * (1 + (self.zRy / Zdif_y) ** 2)
+        R_x = Zdif_x + (self.zRx**2 / Zdif_x)
+        R_y = Zdif_y + (self.zRy**2 / Zdif_y)
 
         central_E_field = self.E0 * self.w0_x / w_x
         offaxis_pulsed_factor = np.exp(
@@ -140,3 +140,4 @@ class SimpleGaussianBeam:
 
         E_field = central_E_field * offaxis_pulsed_factor * polarization_vec
         return E_field, np.cross([0, 0, 1], E_field.T) / const.c
+    
