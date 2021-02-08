@@ -1,8 +1,9 @@
 import numpy as np
 import scipy.constants as const
+from streaking.components.conversions import cartesian_to_spherical
 
 
-class Electrons:
+class ClassicalElectrons:
     """
     Holds a set of electrons. Maybe this should become a `Particles` class at some point?
     """
@@ -25,9 +26,14 @@ class Electrons:
             self.p = p
         else:
             pmag = np.sqrt(2 * const.m_e * const.c ** 2 * Ekin + Ekin ** 2) / const.c
-            self.p = pmag * p / np.linalg.norm(p, axis=-1)[:, None]
+            self.p = pmag * (p / np.linalg.norm(p, axis=0))
 
         if t0 is None:
             self.t0 = np.zeros(self.r.shape[0])
         else:
             self.t0 = t0
+
+    def Ekin(self):
+        pmag = np.linalg.norm(self.p, axis=0)
+        E0 = const.m_e * const.c ** 2
+        return np.sqrt(E0 ** 2 + (pmag * const.c) ** 2) - E0
