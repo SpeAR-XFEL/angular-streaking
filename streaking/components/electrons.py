@@ -25,7 +25,7 @@ class Electrons:
             self.p = p
         else:
             pmag = np.sqrt(2 * const.m_e * const.c ** 2 * Ekin + Ekin ** 2) / const.c
-            self.p = pmag * p / np.linalg.norm(p, axis=-1)
+            self.p = pmag * p / np.linalg.norm(p, axis=-1)[:, None]
 
         if t0 is None:
             self.t0 = np.zeros(self.r.shape[0])
