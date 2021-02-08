@@ -3,7 +3,15 @@ import scipy.constants as const
 import matplotlib.pyplot as plt
 from scipy.ndimage.filters import gaussian_filter
 
+
+
 class Time_Energy_Map:
+   """
+   generates a 2D map of intensity vs photon energy and time
+   inputs are either 
+      - a already existing .png (for comical purposes)
+      - a set of 2D Gaussian peaks given via mu, sigma, corr, I
+   """
    
    def __init__(self,
         image_path=None, 
