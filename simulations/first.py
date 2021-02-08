@@ -1,6 +1,6 @@
-from streaking.components.gaussian_beam import SimpleGaussianBeam
-from streaking.components.ionization import ionizer_simple
-from streaking.components.conversions import cartesian_to_spherical
+from streaking.gaussian_beam import SimpleGaussianBeam
+from streaking.ionization import ionizer_simple
+from streaking.conversions import cartesian_to_spherical
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -33,10 +33,8 @@ if __name__ == "__main__":
     #x = np.linspace(-5e-15, 7e-15, 100)
     #plt.plot(x, XFEL_intensity(x))
     r, phi, theta = cartesian_to_spherical(*photoelectrons.p)
-    E = (np.sqrt((const.m_e * const.c**2)**2 + (r * const.c)**2) - const.m_e * const.c ** 2)  /const.e
-    print(E)
-    print(photoelectrons.Ekin() / const.e)
-    plt.hist(E, density=True, color='C0', alpha=0.5, bins=100)
+    E = photoelectrons.Ekin() / const.e
+    plt.hist(photoelectrons.t0, density=True, color='C0', alpha=0.5, bins=100)
     plt.show()
 
     #fig = plt.figure()

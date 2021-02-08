@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.constants as const
-from streaking.components.conversions import cartesian_to_spherical
+from streaking.conversions import cartesian_to_spherical
 
 
 class ClassicalElectrons:
