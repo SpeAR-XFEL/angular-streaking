@@ -19,7 +19,7 @@ class ClassicalElectrons:
         Ekin : (N) array_like, optional
             If given, p is taken as unit vector of momentum.
         t0 : (N) array_like, optional
-            Optional birth time. If not given, every electron is born at t0 = 0.
+            Optional birth times. If not given, every electron is born at t0 = 0.
         """
         self.r = r
         if Ekin is None:
