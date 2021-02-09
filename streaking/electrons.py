@@ -26,7 +26,7 @@ class ClassicalElectrons:
             self.p = p
         else:
             pmag = np.sqrt(2 * const.m_e * const.c ** 2 * Ekin + Ekin ** 2) / const.c
-            self.p = pmag * (p / np.linalg.norm(p, axis=0))
+            self.p = pmag[:, None] * (p / np.linalg.norm(p, axis=0)).T
 
         if t0 is None:
             self.t0 = np.zeros(self.r.shape[0])
@@ -34,6 +34,6 @@ class ClassicalElectrons:
             self.t0 = t0
 
     def Ekin(self):
-        pmag = np.linalg.norm(self.p, axis=0)
+        pmag = np.linalg.norm(self.p, axis=1)
         E0 = const.m_e * const.c ** 2
         return np.sqrt(E0 ** 2 + (pmag * const.c) ** 2) - E0

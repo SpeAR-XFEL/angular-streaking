@@ -20,5 +20,5 @@ def ionizer_simple(β, IX, EX, EB, E_range, t_range, electrons):
     E = rejection_sampling(EX, E_range, electrons) - EB  # in eV
     E *= const.e  # now in Joules
     px, py, pz = spherical_to_cartesian(1, ψ, ϑ)
-    r = np.zeros((electrons, 3))
+    r = np.zeros((electrons, 3)) + 1e-24
     return ClassicalElectrons(r, np.stack((px, py, pz)), E, t0)
