@@ -86,6 +86,8 @@ t_elecs, E_photon = rejection_sampling_nD(
 ax4.plot(t_elecs * 1e15, E_photon, ".", ms=0.1, color="tab:red")
 ax4.set_ylim(min(TEmap.Ekin_list), max(TEmap.Ekin_list))
 ax4.grid(1)
+ax4.set_ylabel("photon energy in eV")
+
 hist_t, bins_t = np.histogram(t_elecs, bins=TEmap.time_list)
 ax3.plot(
     (bins_t[1:] - (bins_t[1] - bins_t[0]) / 2) * 1e15,
