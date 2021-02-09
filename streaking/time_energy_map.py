@@ -51,49 +51,60 @@ class Time_Energy_Map:
             self.Ekin_list = np.linspace(
                 Ekin_range[0], Ekin_range[1], self.time_energy_map.shape[0]
             )
-            self.times_list = np.arange(
+            self.time_list = np.arange(
                 time_range[0], time_range[1], self.time_energy_map.shape[1]
             )
+            self.t0 = self.time_list[0]
+            self.t1 = self.time_list[-1]
+            self.projection_time = np.sum(self.time_energy_map, axis=0)
+            self.projection_Ekin = np.sum(self.time_energy_map, axis=1)
+        else:
 
-        mu_list = np.array(mu_list)
-        sigma_list = np.array(sigma_list)
-        corr_list = np.array(corr_list)
+            mu_list = np.array(mu_list)
+            sigma_list = np.array(sigma_list)
+            corr_list = np.array(corr_list)
+            
+            # the map should include at least a distance of 4 sigma to each Gaussian peak
+            time_min = np.min(mu_list[0, :] - 4 * sigma_list[0, :])
+            time_max = np.max(mu_list[0, :] + 4 * sigma_list[0, :])
+            Ekin_min = np.min(mu_list[1, :] - 4 * sigma_list[1, :])
+            Ekin_max = np.max(mu_list[1, :] + 4 * sigma_list[1, :])
 
-        time_min = np.min(mu_list[0, :] - 5 * sigma_list[0, :])
-        time_max = np.max(mu_list[0, :] + 5 * sigma_list[0, :])
-        Ekin_min = np.min(mu_list[1, :] - 5 * sigma_list[1, :])
-        Ekin_max = np.max(mu_list[1, :] + 5 * sigma_list[1, :])
-
-        self.time_list = np.linspace(
-            time_min,
-            time_max,
-            np.rint((time_max - time_min) / stepsizes[0]).astype(int) + 1,
-        )
-        self.Ekin_list = np.linspace(
-            Ekin_min,
-            Ekin_max,
-            np.rint((Ekin_max - Ekin_min) / stepsizes[1]).astype(int) + 1,
-        )
-
-        time_energy_map = np.zeros((len(self.Ekin_list), len(self.time_list)))
-        N_pulses = mu_list.shape[1]
-        X, Y = np.meshgrid(self.time_list, self.Ekin_list)
-        for i in range(N_pulses):
-            mu1 = mu_list[0, i]
-            sigma1 = sigma_list[0, i]
-            mu2 = mu_list[1, i]
-            sigma2 = sigma_list[1, i]
-            corr = corr_list[i]
-            I = I_list[i]
-            time_energy_map = time_energy_map + I / (
-                2 * np.pi * sigma1 * sigma2 * np.sqrt(1 - corr ** 2)
-            ) * np.exp(
-                -1
-                / (2 - 2 * corr ** 2)
-                * (
-                    (X - mu1) ** 2 / sigma1 ** 2
-                    + (Y - mu2) ** 2 / sigma2 ** 2
-                    - 2 * corr * (X - mu1) * (Y - mu2) / sigma1 / sigma2
-                )
+            self.time_list = np.linspace(
+                time_min,
+                time_max,
+                np.rint((time_max - time_min) / stepsizes[0]).astype(int) + 1,
             )
-        self.time_energy_map = time_energy_map
+            self.Ekin_list = np.linspace(
+                Ekin_min,
+                Ekin_max,
+                np.rint((Ekin_max - Ekin_min) / stepsizes[1]).astype(int) + 1,
+            )
+            self.t0 = self.time_list[0]
+            self.t1 = self.time_list[-1]
+
+            time_energy_map = np.zeros((len(self.Ekin_list), len(self.time_list)))
+            N_pulses = mu_list.shape[1]
+            X, Y = np.meshgrid(self.time_list, self.Ekin_list)
+            for i in range(N_pulses):
+                mu1 = mu_list[0, i]
+                sigma1 = sigma_list[0, i]
+                mu2 = mu_list[1, i]
+                sigma2 = sigma_list[1, i]
+                corr = corr_list[i]
+                I = I_list[i]
+                time_energy_map = time_energy_map + I / (
+                    2 * np.pi * sigma1 * sigma2 * np.sqrt(1 - corr ** 2)
+                ) * np.exp(
+                    -1
+                    / (2 - 2 * corr ** 2)
+                    * (
+                        (X - mu1) ** 2 / sigma1 ** 2
+                        + (Y - mu2) ** 2 / sigma2 ** 2
+                        - 2 * corr * (X - mu1) * (Y - mu2) / sigma1 / sigma2
+                    )
+                )
+            self.time_energy_map = time_energy_map / np.max(time_energy_map)
+
+            self.projection_time = np.sum(self.time_energy_map, axis=0)
+            self.projection_Ekin = np.sum(self.time_energy_map, axis=1)
