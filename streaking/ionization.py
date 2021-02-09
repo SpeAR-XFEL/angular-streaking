@@ -2,7 +2,9 @@ import numpy as np
 import scipy.constants as const
 from streaking.electrons import ClassicalElectrons
 from streaking.stats import rejection_sampling
-from streaking.conversions import spherical_to_cartesian
+from streaking.conversions import spherical_to_cartesian, cartesian_to_spherical
+
+import matplotlib.pyplot as plt
 
 
 def diff_cross_section_dipole(ϑ, β):

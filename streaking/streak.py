@@ -6,8 +6,6 @@ from streaking.electrons import ClassicalElectrons
 
 def classical_lorentz_ode(t, y, m, q, t0, beam):
     r, p = y.reshape(2, -1, 3)
-    # print(p[0:2])
-    # quit()
     E, B = beam.fields(*r.T, t + t0)
     # Can’t use ClassicalElectron methods here...
     pmag = np.linalg.norm(p, axis=0)
@@ -16,17 +14,13 @@ def classical_lorentz_ode(t, y, m, q, t0, beam):
     gamma = Etot / E0
     v = p / (gamma * m)
     drdt = v
-
     dpdt = q * (E + np.cross(v, B))
-    # print(np.ravel((drdt, dpdt)).shape)
     return np.ravel((drdt, dpdt))
 
 
 def classical_lorentz_streaker(electrons, beam, t_span):
 
     y0 = np.ravel((electrons.r, electrons.p))
-    # print(y0.reshape(2, -1, 3))
-    # quit()
     result = scipy.integrate.solve_ivp(
         classical_lorentz_ode,
         t_span,
