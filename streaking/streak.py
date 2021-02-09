@@ -28,6 +28,7 @@ def classical_lorentz_streaker(electrons, beam, t_span):
         args=(const.m_e, -const.e, electrons.t0, beam),
         vectorized=True,
         first_step=1e-19,
+        method='RK23'
     )
 
     return ClassicalElectrons(*result.y[:, -1].reshape(2, -1, 3), t0=electrons.t0)
