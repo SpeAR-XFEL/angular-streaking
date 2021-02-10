@@ -27,7 +27,24 @@ def classical_lorentz_streaker(electrons, beam, t_span):
         y0,
         args=(const.m_e, -const.e, electrons.t0, beam),
         vectorized=True,
-        first_step=1e-19,
+        first_step=1e-16,
     )
 
     return ClassicalElectrons(*result.y[:, -1].reshape(2, -1, 3), t0=electrons.t0)
+
+def F_lor(electrons,E,B):
+    F=-const.e*(E+np.cross(electrons.p,B)/const.m_e/electrons.gamma())
+    return F
+
+def interaction_step(electrons, beam, t, t_step):
+    E,B = beam.fields(*electrons.r.T,t)
+    F=F_lor(electrons,E,B)
+    electrons.p=electrons.p + F*t_step
+    electrons.r=electrons.r + electrons.v()*t_step
+    
+def Arne_streaker(electrons,beam,t0,t_step,N_step):
+    t=t0
+    for i in range(N_step):
+        interaction_step(electrons,beam,t+electrons.t0,t_step)
+        t=t+t_step
+    return electrons

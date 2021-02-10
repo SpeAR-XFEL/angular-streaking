@@ -24,7 +24,6 @@ def rejection_sampling(pdf, parameter_range, samples, params=()):
 
 
 def rejection_sampling_nD(pdf, parameter_range, samples, params=()):
-
     """
     draws (x1,...,xN) distributed according to pdf(x1,...,xN)
     Runtime drastically depends on how even the pdf is distributed. 
@@ -49,11 +48,14 @@ def rejection_sampling_nD(pdf, parameter_range, samples, params=()):
     rand = np.empty((Ndim, samples))
     rejection = np.empty(samples)
     sum_rejected = samples
-    while sum_rejected > 0:
+    while sum_rejected > 0.1:
         for i in range(Ndim):
             rand[i, :][rejected] = np.random.uniform(*parameter_range[i], sum_rejected)
         rejection[rejected] = np.random.rand(sum_rejected)
         rand_rejected = rand[:, rejected]
+#        print(*rand_rejected)
+#        print(params)
         rejected[rejected] = rejection[rejected] > pdf(*rand_rejected, *params)
         sum_rejected = np.sum(rejected)
+        
     return rand

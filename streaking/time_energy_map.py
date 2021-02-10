@@ -2,7 +2,7 @@ import numpy as np
 import scipy.constants as const
 import matplotlib.pyplot as plt
 from scipy.ndimage.filters import gaussian_filter
-
+import scipy.interpolate as si
 
 class Time_Energy_Map:
     """
@@ -44,7 +44,7 @@ class Time_Energy_Map:
             resolution of the time-energy map given in (s,eV)
         """
         if image_path is not None:
-            self.time_energy_map = gaussian_filter(
+            time_energy_map = gaussian_filter(
                 np.flipud(-1 * plt.imread(image_path)[:, :, 0] + 1), sigma=3
             )
 
@@ -54,10 +54,6 @@ class Time_Energy_Map:
             self.time_list = np.arange(
                 time_range[0], time_range[1], self.time_energy_map.shape[1]
             )
-            self.t0 = self.time_list[0]
-            self.t1 = self.time_list[-1]
-            self.projection_time = np.sum(self.time_energy_map, axis=0)
-            self.projection_Ekin = np.sum(self.time_energy_map, axis=1)
         else:
 
             mu_list = np.array(mu_list)
@@ -80,8 +76,6 @@ class Time_Energy_Map:
                 Ekin_max,
                 np.rint((Ekin_max - Ekin_min) / stepsizes[1]).astype(int) + 1,
             )
-            self.t0 = self.time_list[0]
-            self.t1 = self.time_list[-1]
 
             time_energy_map = np.zeros((len(self.Ekin_list), len(self.time_list)))
             N_pulses = mu_list.shape[1]
@@ -104,7 +98,17 @@ class Time_Energy_Map:
                         - 2 * corr * (X - mu1) * (Y - mu2) / sigma1 / sigma2
                     )
                 )
-            self.time_energy_map = time_energy_map / np.max(time_energy_map)
-
-            self.projection_time = np.sum(self.time_energy_map, axis=0)
-            self.projection_Ekin = np.sum(self.time_energy_map, axis=1)
+            time_energy_map = time_energy_map / np.max(time_energy_map)
+        self.time_energy_map=time_energy_map    
+        self.t0 = self.time_list[0]
+        self.t1 = self.time_list[-1]
+        self.E0 = self.Ekin_list[0]
+        self.E1 = self.Ekin_list[-1]
+        self.projection_time = np.sum(self.time_energy_map, axis=0)
+        self.projection_Ekin = np.sum(self.time_energy_map, axis=1)
+            
+    def pdf(self, t, Ekin):
+        spline = si.RectBivariateSpline(
+        self.time_list, self.Ekin_list, self.time_energy_map.T
+        )
+        return spline.ev(t,Ekin)
