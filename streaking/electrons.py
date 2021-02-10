@@ -20,7 +20,8 @@ class ClassicalElectrons:
         t0 : (N) array_like, optional
             Optional birth times. If not given, every electron is born at t0 = 0.
         """
-        self.r = r
+        self.r = np.asarray(r)
+        p = np.asarray(p)
         if Ekin is None:
             self.p = p
         else:
@@ -31,14 +32,16 @@ class ClassicalElectrons:
             self.t0 = np.zeros(self.r.shape[0])
         else:
             self.t0 = t0
-            
+
     def Ekin(self):
         pmag = np.linalg.norm(self.p, axis=1)
         E0 = const.m_e * const.c ** 2
         return np.sqrt(E0 ** 2 + (pmag * const.c) ** 2) - E0
-    
+
     def gamma(self):
-        return np.sqrt(1+(np.linalg.norm(self.p,axis=0)/(const.m_e*const.c))**2)
-    
+        return np.sqrt(
+            1 + (np.linalg.norm(self.p, axis=0) / (const.m_e * const.c)) ** 2
+        )
+
     def v(self):
-        return self.p/(const.m_e*self.gamma())
+        return self.p / (const.m_e * self.gamma())
