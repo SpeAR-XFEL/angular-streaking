@@ -51,7 +51,7 @@ if __name__ == "__main__":
     )
 
     N_e = 2000
-    E_ionize = 900  # eV
+    E_ionize = 1150  # eV
 
     pe = ionizer_Sauter(TEmap, E_ionize, N_e)
 
@@ -62,7 +62,8 @@ if __name__ == "__main__":
     sr, sphi, stheta = cartesian_to_spherical(*spe.p.T)
 
     fig = plt.figure(constrained_layout=True)
-    gs = gridspec.GridSpec(7, 2, height_ratios=[5, 5, 20, 1, 1, 1, 1], figure=fig)
+    #fig.set_constrained_layout_pads(w_pad=2./72, h_pad=0./72)
+    gs = gridspec.GridSpec(7, 2, height_ratios=[5, 20, 5, 1, 1, 1, 1], figure=fig)
     ax0 = plt.subplot(gs[0, :])
     ax0.set_xlabel("$t$ / fs")
     ax0.xaxis.labelpad = -12
@@ -73,7 +74,7 @@ if __name__ == "__main__":
         TEmap.time_energy_map,
         shading="nearest",
     )
-    ax1 = plt.subplot(gs[2, 0])
+    ax1 = plt.subplot(gs[1, 0])
 
     bins = [np.linspace(0, 2 * np.pi, 51), 50]
 
@@ -83,31 +84,32 @@ if __name__ == "__main__":
     )
     im1 = ax1.imshow(data1.T, origin="lower", aspect="auto")
     im1.set_extent((x1[0], x1[-1], y1[0], y1[-1]))
-    #ax1.set_title("Unstreaked")
-    ax2 = plt.subplot(gs[2, 1])
-    #ax2.set_title("Streaked")
+    ax2 = plt.subplot(gs[1, 1])
     data2, x2, y2 = np.histogram2d(
         (stheta + np.pi / 2) % (2 * np.pi), spe.Ekin() / const.e, bins=bins
     )
     im2 = ax2.imshow(data2.T, origin="lower", aspect="auto")
     im2.set_extent((x2[0], x2[-1], y2[0], y2[-1]))
 
+    ax1.set_title("Unstreaked")
+    ax2.set_title("Streaked")
     for ax in (ax1, ax2):
-        ax.set_xlabel(r"$\varphi$")
         ax.set_ylabel(r"$E_\mathrm{kin}$ / eV")
+        ax.tick_params(bottom=False, labelbottom=False)
 
-    axmarg1 = plt.subplot(gs[1, 0], sharex=ax1)
-    axmarg2 = plt.subplot(gs[1, 1], sharex=ax2)
-    axmarg1.set_xlim(x1[0], x1[-1])
-    axmarg2.set_xlim(x2[0], x2[-1])
+    axmarg1 = plt.subplot(gs[2, 0], sharex=ax1)
+    axmarg2 = plt.subplot(gs[2, 1], sharex=ax2, sharey=axmarg1)
     marg1 = np.append(data1.T.sum(axis=0), 0)
     marg2 = np.append(data2.T.sum(axis=0), 0)
     st1, = axmarg1.step(x1, marg1, where='pre')
     st2, = axmarg2.step(x2, marg1, where='pre', color='C0', alpha=1)
     st3, = axmarg2.step(x2, marg2, where='pre', color='C1', alpha=0.5)
     fb1 = axmarg2.fill_between(x2, marg1, marg2, step='pre', alpha=0.5, color='C1')
-    axmarg1.tick_params(bottom=False, labelbottom=False, left=False, labelleft=False)
-    axmarg2.tick_params(bottom=False, labelbottom=False, left=False, labelleft=False)
+
+    for ax in(axmarg1, axmarg2):
+        ax.set_xlabel(r"$\varphi$")
+        ax.set_xlim(x2[0], x2[-1])
+        ax.tick_params(left=False, labelleft=False)
 
 
     def update(val):
@@ -142,7 +144,7 @@ if __name__ == "__main__":
         plt.subplot(gs[5, :]),
         plt.subplot(gs[6, :]),
     )
-    s0 = Slider(slax0, r"Energy", 0, 30e-6, valfmt="%.1e", valinit=30e-6)
+    s0 = Slider(slax0, r"Energy", 0, 6e-2, valfmt="%.1e", valinit=30e-6)
     s1 = Slider(slax1, r"CEP", 0, 2 * np.pi, valfmt="%.1e", valinit=0)
     s2 = Slider(slax2, r"time", 0, 1e-11, valfmt="%.1e", valinit=1e-12)
     s3 = Slider(slax3, r"step", 0.5e-14, 2e-14, valfmt="%.1e", valinit=1e-14)
