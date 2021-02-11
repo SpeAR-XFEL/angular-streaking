@@ -144,7 +144,7 @@ if __name__ == "__main__":
         plt.subplot(gs[5, :]),
         plt.subplot(gs[6, :]),
     )
-    s0 = Slider(slax0, r"Energy", 0, 6e-2, valfmt="%.1e", valinit=30e-6)
+    s0 = Slider(slax0, r"Energy", 0, 100e-6, valfmt="%.1e", valinit=30e-6)
     s1 = Slider(slax1, r"CEP", 0, 2 * np.pi, valfmt="%.1e", valinit=0)
     s2 = Slider(slax2, r"time", 0, 1e-11, valfmt="%.1e", valinit=1e-12)
     s3 = Slider(slax3, r"step", 0.5e-14, 2e-14, valfmt="%.1e", valinit=1e-14)
