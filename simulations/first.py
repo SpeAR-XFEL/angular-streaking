@@ -62,9 +62,10 @@ if __name__ == "__main__":
     sr, sphi, stheta = cartesian_to_spherical(*spe.p.T)
 
     fig = plt.figure(constrained_layout=True)
-    gs = gridspec.GridSpec(6, 2, height_ratios=[10, 20, 1, 1, 1, 1], figure=fig)
+    gs = gridspec.GridSpec(7, 2, height_ratios=[5, 5, 20, 1, 1, 1, 1], figure=fig)
     ax0 = plt.subplot(gs[0, :])
     ax0.set_xlabel("$t$ / fs")
+    ax0.xaxis.labelpad = -12
     ax0.set_ylabel(r"$h\nu$ / eV")
     ax0.pcolormesh(
         TEmap.time_list * 1e15,
@@ -72,53 +73,74 @@ if __name__ == "__main__":
         TEmap.time_energy_map,
         shading="nearest",
     )
-    ax1 = plt.subplot(gs[1, 0])
+    ax1 = plt.subplot(gs[2, 0])
 
     bins = [np.linspace(0, 2 * np.pi, 51), 50]
 
     # Create 2d Histogram
-    data, x, y = np.histogram2d(
+    data1, x1, y1 = np.histogram2d(
         (theta + np.pi / 2) % (2 * np.pi), pe.Ekin() / const.e, bins=bins
     )
-    im1 = ax1.imshow(data.T, origin="lower", aspect="auto")
-    im1.set_extent((x[0], x[-1], y[0], y[-1]))
-    # plt.hist2d(pe.p.T[0], pe.p.T[1], bins=200)
-    ax1.set_title("Unstreaked")
-    ax2 = plt.subplot(gs[1, 1])
-    ax2.set_title("Streaked")
-    data, x, y = np.histogram2d(
+    im1 = ax1.imshow(data1.T, origin="lower", aspect="auto")
+    im1.set_extent((x1[0], x1[-1], y1[0], y1[-1]))
+    #ax1.set_title("Unstreaked")
+    ax2 = plt.subplot(gs[2, 1])
+    #ax2.set_title("Streaked")
+    data2, x2, y2 = np.histogram2d(
         (stheta + np.pi / 2) % (2 * np.pi), spe.Ekin() / const.e, bins=bins
     )
-    im2 = ax2.imshow(data.T, origin="lower", aspect="auto")
-    im2.set_extent((x[0], x[-1], y[0], y[-1]))
+    im2 = ax2.imshow(data2.T, origin="lower", aspect="auto")
+    im2.set_extent((x2[0], x2[-1], y2[0], y2[-1]))
 
     for ax in (ax1, ax2):
         ax.set_xlabel(r"$\varphi$")
         ax.set_ylabel(r"$E_\mathrm{kin}$ / eV")
 
+    axmarg1 = plt.subplot(gs[1, 0], sharex=ax1)
+    axmarg2 = plt.subplot(gs[1, 1], sharex=ax2)
+    axmarg1.set_xlim(x1[0], x1[-1])
+    axmarg2.set_xlim(x2[0], x2[-1])
+    marg1 = np.append(data1.T.sum(axis=0), 0)
+    marg2 = np.append(data2.T.sum(axis=0), 0)
+    st1, = axmarg1.step(x1, marg1, where='pre')
+    st2, = axmarg2.step(x2, marg1, where='pre', color='C0', alpha=1)
+    st3, = axmarg2.step(x2, marg2, where='pre', color='C1', alpha=0.5)
+    fb1 = axmarg2.fill_between(x2, marg1, marg2, step='pre', alpha=0.5, color='C1')
+    axmarg1.tick_params(bottom=False, labelbottom=False, left=False, labelleft=False)
+    axmarg2.tick_params(bottom=False, labelbottom=False, left=False, labelleft=False)
+
+
     def update(val):
-        # Change arguments and calculate new trajectories
+        global fb1
         beam = SimpleGaussianBeam(energy=s0.val, cep=s1.val)
         spe = classical_lorentz_streaker(pe, beam, (0, s2.val), s3.val)
         r, phi, theta = cartesian_to_spherical(*pe.p.T)
         sr, sphi, stheta = cartesian_to_spherical(*spe.p.T)
-        data, x, y = np.histogram2d(
+        data1, x1, y1 = np.histogram2d(
             (theta + np.pi / 2) % (2 * np.pi), pe.Ekin() / const.e, bins=bins
         )
-        im1.set_data(data.T)
-        im1.set_extent((x[0], x[-1], y[0], y[-1]))
-        data, x, y = np.histogram2d(
+        im1.set_data(data1.T)
+        im1.set_extent((x1[0], x1[-1], y1[0], y1[-1]))
+        data2, x2, y2 = np.histogram2d(
             (stheta + np.pi / 2) % (2 * np.pi), spe.Ekin() / const.e, bins=bins
         )
-        im2.set_data(data.T)
-        im2.set_extent((x[0], x[-1], y[0], y[-1]))
+        im2.set_data(data2.T)
+        im2.set_extent((x2[0], x2[-1], y2[0], y2[-1]))
+        marg1 = np.append(data1.T.sum(axis=0), 0)
+        marg2 = np.append(data2.T.sum(axis=0), 0)
+        st1.set_ydata(marg1)
+        st2.set_ydata(marg1)
+        st3.set_ydata(marg2)
+        fb1.remove()
+        fb1 = axmarg2.fill_between(x2, marg1, marg2, step='pre', alpha=0.5, color='C1')
+        return im1, im2, st1, st2, st3
 
     # Create three slider axes to modify α0-α2 on the fly
     slax0, slax1, slax2, slax3 = (
-        plt.subplot(gs[2, :]),
         plt.subplot(gs[3, :]),
         plt.subplot(gs[4, :]),
         plt.subplot(gs[5, :]),
+        plt.subplot(gs[6, :]),
     )
     s0 = Slider(slax0, r"Energy", 0, 30e-6, valfmt="%.1e", valinit=30e-6)
     s1 = Slider(slax1, r"CEP", 0, 2 * np.pi, valfmt="%.1e", valinit=0)
