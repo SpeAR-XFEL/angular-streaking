@@ -3,6 +3,7 @@ import scipy.constants as const
 import scipy.integrate
 from streaking.electrons import ClassicalElectrons
 from numpy import pi as π
+from multiprocessing import Pool
 
 def rk4(fun, t_span, y0, max_step, args=None):
     h = max_step
@@ -34,6 +35,7 @@ def classical_lorentz_ode(t, y, m, q, t0, beam):
     dpdt = q * (E + np.cross(v, B))
     return (drdt, dpdt)
 
+#def classical_lorentz_solve(y0)
 
 def classical_lorentz_streaker(electrons, beam, t_span, t_step):
     y0 = (electrons.r, electrons.p)
@@ -44,6 +46,11 @@ def classical_lorentz_streaker(electrons, beam, t_span, t_step):
         t_step,
         args=(const.m_e, -const.e, electrons.t0, beam),
     )
+
+    #with Pool(5) as p:
+    #    res = p.map(lambda y0_: rk4(classical_lorentz_ode, t_span, y0_, t_step, args=(const.m_e, -const.e, electrons.t0, beam)), y0.T)
+#
+    #print(res)
 
     return ClassicalElectrons(*result, t0=electrons.t0)
 
