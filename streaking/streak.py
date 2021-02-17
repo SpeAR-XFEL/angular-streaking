@@ -4,6 +4,8 @@ import scipy.integrate
 from streaking.electrons import ClassicalElectrons
 from numpy import pi as π
 from multiprocessing import Pool
+from functools import partial
+import os
 
 def rk4(fun, t_span, y0, max_step, args=None):
     h = max_step
@@ -22,7 +24,7 @@ def rk4(fun, t_span, y0, max_step, args=None):
     return y
 
 
-def classical_lorentz_ode(t, y, m, q, t0, beam):
+def classical_lorentz_ode(t, y, m, q, beam, t0):
     r, p = y  # y.reshape(2, -1, 3)
     E, B = beam.fields(*r.T, t + t0)
     # Can’t use ClassicalElectron methods here...
@@ -35,23 +37,28 @@ def classical_lorentz_ode(t, y, m, q, t0, beam):
     dpdt = q * (E + np.cross(v, B))
     return (drdt, dpdt)
 
-#def classical_lorentz_solve(y0)
+def classical_lorentz_solve(t_span, t_step, args, rest):
+    r, p, t = rest
+    return rk4(classical_lorentz_ode, t_span, (r, p), t_step, args=(*args, t))
 
 def classical_lorentz_streaker(electrons, beam, t_span, t_step):
     y0 = (electrons.r, electrons.p)
-    result = rk4(
-        classical_lorentz_ode,
-        t_span,
-        y0,
-        t_step,
-        args=(const.m_e, -const.e, electrons.t0, beam),
-    )
-
-    #with Pool(5) as p:
-    #    res = p.map(lambda y0_: rk4(classical_lorentz_ode, t_span, y0_, t_step, args=(const.m_e, -const.e, electrons.t0, beam)), y0.T)
-#
-    #print(res)
-
+    ecount = electrons.r.shape[0]
+    #result = rk4(
+    #    classical_lorentz_ode,
+    #    t_span,
+    #    y0,
+    #    t_step,
+    #    args=(const.m_e, -const.e, beam, electrons.t0),
+    #)
+    func = partial(classical_lorentz_solve, t_span, t_step, (const.m_e, -const.e, beam))
+    threads = os.cpu_count()
+    splitr = np.array_split(electrons.r, threads)
+    splitp = np.array_split(electrons.p, threads)
+    splitt = np.array_split(electrons.t0, threads)
+    with Pool(threads) as p:
+        res = p.map(func, [z for z in zip(splitr, splitp, splitt)])
+    result = np.concatenate(res, axis=1)
     return ClassicalElectrons(*result, t0=electrons.t0)
 
 

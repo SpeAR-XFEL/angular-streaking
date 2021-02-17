@@ -13,6 +13,7 @@ import matplotlib.ticker as ticker
 import matplotlib.pyplot as plt
 import matplotlib
 from tqdm import tqdm
+import time
 
 matplotlib.use("Gtk3Agg")
 matplotlib.rcParams['figure.dpi'] = 150
@@ -52,7 +53,7 @@ if __name__ == "__main__":
     subgs = gs[1, 1].subgridspec(3, 2, hspace=0, wspace=0.1, height_ratios=(5, 2, 1))
 
     # 2d histograms for KE over angle
-    phi_bin_count = 16
+    phi_bin_count = 64
     bins = [np.linspace(0, 2 * np.pi, phi_bin_count+1), 50]
     ax1 = fig.add_subplot(subgs[0, 0])
     ax2 = fig.add_subplot(subgs[0, 1])
@@ -127,17 +128,23 @@ if __name__ == "__main__":
 
     def update_streaking(val):
         global fb1
+        start = time.perf_counter()
 
         beam = SimpleGaussianBeam(
-            energy=sliders['str. energy / J'].val, 
-            cep=sliders['str. CEP'].val, 
-            envelope_offset=sliders['str. delay / s'].val, 
+            energy=sliders['str. energy / J'].val,
+            cep=sliders['str. CEP'].val,
+            envelope_offset=sliders['str. delay / s'].val,
             wavelength=sliders['str. lambda / m'].val,
             duration=sliders['str. duration / s'].val)
         spe = classical_lorentz_streaker(pe, beam, (0, sliders['sim time / s'].val), sliders['stepsize / s'].val)
         r, phi, theta = cartesian_to_spherical(*pe.p.T)
         sr, sphi, stheta = cartesian_to_spherical(*spe.p.T)
         rsr, _, _ = cartesian_to_spherical(*spe.r.T)
+
+        diff = time.perf_counter()-start
+        per = diff/sliders['electrons'].val
+        print(f'Streaking took {diff:.1f} s, {per*1e6:.1f} µs / e-')
+
         data1, x1, y1 = np.histogram2d(
             (theta + np.pi / 2) % (2 * np.pi), pe.Ekin() / const.e, bins=bins
         )
@@ -164,14 +171,14 @@ if __name__ == "__main__":
 
     # Sliders galore!
     sliders_spec = { 
-        "peaks":              (1,        10,        1,  1,     None, update_electrons),
+        "peaks":              (1,        10,        1,  1,     '%1d', update_electrons),
         "xfel dur. (1pk) / s":(1e-17,     1e-14, None,  1e-15, None, update_electrons),
-        "electrons":          (1e3,       5e4,      1,  1e4,   None, update_electrons),
+        "electrons":          (1e3,       1e6,      1,  1e3,   None, update_electrons),
         "str. lambda / m":    (1e-7,      10e-6, None, 10e-6,  None, update_streaking),
         "str. duration / s":  (1e-14,     1e-12, None,  3e-13, None, update_streaking),
         "str. delay / s":     (-1e-12,    1e-12, None,  0,     None, update_streaking),
         "str. energy / J":    (0,       100e-6,  None, 30e-6,  None, update_streaking),
-        "str. CEP":           (0,      2*np.pi,  None,  0,     None, update_streaking),
+        "str. CEP":           (0,      2*np.pi,  None,  0,     '%1.2f', update_streaking),
         "sim time / s":       (0,         1e-11, None,  1e-12, None, update_streaking),
         "stepsize / s":       (5e-15,     2e-14, None,  1e-14, None, update_streaking),
     #   Name                   min        max    step  start   fmt   update function
@@ -187,18 +194,18 @@ if __name__ == "__main__":
         ax.set_zorder(10)
         mi, ma, ste, sta, fmt, fun = sliders_spec[key]
         if ste is None:
-            sl = Slider(ax, key, mi, ma, valinit=sta, valfmt='%.1e')
+            sl = Slider(ax, key, mi, ma, valinit=sta, valfmt='%.1e' if fmt is None else fmt)
         else:
-            sl = Slider(ax, key, mi, ma, valinit=sta, valstep=ste, valfmt='%.1e')
+            sl = Slider(ax, key, mi, ma, valinit=sta, valstep=ste, valfmt='%.1e'if fmt is None else fmt)
         sl.on_changed(fun)
         sl.valtext.set_fontfamily("monospace")
         sliders[key] = sl
 
 
-    frames = 200
+    frames = 20
     def animate(frame):#1e-17,     5e-15
         #sliders['str. CEP'].set_val(frame / 200 * 2 * np.pi)
-        sliders['xfel dur. (1pk)'].set_val(frame / frames * (5e-15-1e-17) + 1e-17)
+        sliders['xfel dur. (1pk) / s'].set_val(frame / frames * (5e-15-1e-17) + 1e-17)
         return im1, im2, st1, st2, st3
 
     update_electrons(None)
@@ -206,7 +213,7 @@ if __name__ == "__main__":
     im2.autoscale()
     plt.tight_layout(pad=1)
     plt.show()
-    quit()
-    anim = animation.FuncAnimation(fig, animate,
-                               frames=frames, blit=True)
-    anim.save('build/anim_dur.mp4', fps=50, dpi=100)
+    #quit()
+    #anim = animation.FuncAnimation(fig, animate,
+    #                           frames=frames, blit=True)
+    #anim.save('build/anim_dur.mp4', fps=5, dpi=100)
