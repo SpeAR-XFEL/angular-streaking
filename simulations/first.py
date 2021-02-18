@@ -75,12 +75,12 @@ if __name__ == '__main__':
     axmarg1y = fig.add_subplot(subgs1[0, 1], sharey=ax1)
     axmarg2y = fig.add_subplot(subgs2[0, 1], sharey=ax2)
     margx = np.zeros(len(bins[0]))
-    st1, = axmarg1x.step(bins[0], margx, where='pre')
-    st2, = axmarg2x.step(bins[0], margx, where='pre', color='C0', alpha=1)
-    st3, = axmarg2x.step(bins[0], margx, where='pre', color='C1', alpha=0.5)
+    st1, = axmarg1x.step(bins[0], margx, where='post')
+    st2, = axmarg2x.step(bins[0], margx, where='post', color='C0', alpha=1)
+    st3, = axmarg2x.step(bins[0], margx, where='post', color='C1', alpha=0.5)
     fb1 = axmarg2x.fill_between(bins[0], margx, margx, step='pre', alpha=0.5, color='C1')
     axdiffx.axhline(0, color='k', lw=1)
-    st4, = axdiffx.step(bins[0], margx, where='pre', color='C1')
+    st4, = axdiffx.step(bins[0], margx, where='post', color='C1')
     loc = ticker.FixedLocator((0,))
     axdiffx.yaxis.set_major_locator(loc)
     st5, = axmarg1y.plot([1], [1], color='C0', drawstyle='steps-pre')
@@ -98,6 +98,7 @@ if __name__ == '__main__':
         N_G = int(sliders['XFEL']['peaks'].val)
         N_e = int(sliders['simulation']['electrons'].val)
         E_ionize = sliders['target']['binding E / eV'].val  # eV
+        β = sliders['target']['β (1pk)'].val
 
         start = time.perf_counter()
 
@@ -128,7 +129,7 @@ if __name__ == '__main__':
             # Please dont ask about this fs bullshit.. just for display purposes
             tEcov = np.diag((dur, sigE))**2
             tEcovfs = np.diag((dur*1e15, sigE))**2
-            pe = ionizer_simple(2, tEmeans, tEcov, E_ionize, N_e)
+            pe = ionizer_simple(β, tEmeans, tEcov, E_ionize, N_e)
             sigma_range = 4
             rangeI = (-sigma_range*dur, sigma_range*dur)
             rangeIfs = (-sigma_range*dur*1e15, sigma_range*dur*1e15)
@@ -155,7 +156,7 @@ if __name__ == '__main__':
             energy=sliders['streaking']['energy / J'].val,
             cep=sliders['streaking']['CEP'].val,
             envelope_offset=sliders['streaking']['delay / s'].val,
-            wavelength=sliders['streaking']['wavelength / m'].val,
+            wavelength=sliders['streaking']['wavelen. / m'].val,
             duration=sliders['streaking']['width / s'].val)
         spe = classical_lorentz_streaker(pe, beam, (0, sliders['simulation']['time / s'].val), sliders['simulation']['stepsize / s'].val)
         r, phi, theta = cartesian_to_spherical(*pe.p.T)
@@ -189,13 +190,12 @@ if __name__ == '__main__':
         axdiffx.relim()
         axdiffx.autoscale_view()
         fb1.remove()
-        fb1 = axmarg2x.fill_between(x2, marg1x, marg2x, step='pre', alpha=0.5, color='C1')
+        fb1 = axmarg2x.fill_between(x2, marg1x, marg2x, step='post', alpha=0.5, color='C1')
         st5.set_data(marg1y, y1)
         st6.set_data(marg2y, y2)
-        axmarg1y.relim()
-        axmarg2y.relim()
-        axmarg1y.autoscale_view(scaley=False)
-        axmarg2y.autoscale_view(scaley=False)
+        for i, ax in enumerate((axmarg1y, axmarg2y, axmarg1x, axmarg2x)):
+            ax.relim()
+            ax.autoscale_view(scaley=(i >= 2), scalex=(i < 2))
         return im1, im2, st1, st2, st3, st4, st5, st6
 
     # Sliders galore!
@@ -203,21 +203,22 @@ if __name__ == '__main__':
         'XFEL': {
             'peaks':              (1,       10,    1,     1,      '%1d',   update_electrons),
             'width (1pk) / s':    (1e-17,   1e-14, None,  1e-15,  None,    update_electrons),
-            'µ(E) (1pk) / eV':    (800,     2000,  None,  1200,   '%.0f',    update_electrons),
-            'σ(E) (1pk) / eV':    (0.1,     10,    None,  0.5,    '%.1f',    update_electrons),
+            'µ(E) (1pk) / eV':    (800,     2000,  None,  1200,   '%.0f',  update_electrons),
+            'σ(E) (1pk) / eV':    (0.1,     10,    None,  0.5,    '%.1f',  update_electrons),
         },
         'target': {
-            'binding E / eV':     (500,     1500,  None,  1150,   '%.0f',    update_electrons),
+            'binding E / eV':     (500,     1500,  None,  1150,   '%.0f',  update_electrons),
+            'β (1pk)':                  (-1,      2,     None,  2,      '%.2f',  update_electrons),
         },
         'streaking': {
-            'wavelength / m':     (1e-7,    10e-6, None,  10e-6,  None,    update_streaking),
+            'wavelen. / m':       (1e-7,    10e-6, None,  10e-6,  None,    update_streaking),
             'width / s':          (1e-14,   1e-12, None,  3e-13,  None,    update_streaking),
             'delay / s':          (-1e-12,  1e-12, None,  0,      None,    update_streaking),
             'energy / J':         (0,       1e-3,  None,  30e-6,  None,    update_streaking),
             'CEP':                (0,       2*π,   None,  0,     '%1.2f',  update_streaking),
         },
         'simulation': {
-            'electrons':          (1e3,     1e6,   1,     5e4,    None,    update_electrons),
+            'electrons':          (1e3,     5e5,   1,     5e4,    None,    update_electrons),
             'time / s':           (0,       1e-11, None,  1e-12,  None,    update_streaking),
             'stepsize / s':       (5e-15,   2e-14, None,  1e-14,  None,    update_streaking),
         },
