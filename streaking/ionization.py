@@ -10,17 +10,17 @@ def diff_cross_section_dipole(φ, β):
     return 1 + β * 1 / 2 * (3 * np.cos(φ) ** 2 - 1)
 
 
-def ionizer_simple(β, IX, EX, EB, E_range, t_range, electrons):
+def ionizer_simple(β, tEmean, tEcov, EB, electrons):
     """
     Generate randomly distributed photoelectrons
     """
-    θ = rejection_sampling(diff_cross_section_dipole, (-π, π), electrons, (β,))
-    φ = np.random.uniform(-π, π, electrons)
-    t0 = rejection_sampling(IX, t_range, electrons)  # birth time
-    # not time-dependent for now. needs to be to account for chirp.
-    E = rejection_sampling(EX, E_range, electrons) - EB  # in eV
-    E *= const.e  # now in Joules
-    px, py, pz = spherical_to_cartesian(1, φ, θ)
+    φ = rejection_sampling(diff_cross_section_dipole, (-π, π), electrons, (β,))
+    θ = np.zeros(electrons) + π/2 # fixed for now
+    t0, E = np.random.multivariate_normal(tEmean, tEcov, electrons).T
+    E -= EB
+
+    E *= const.e  # in Joules
+    px, py, pz = spherical_to_cartesian(1, θ, φ)
     r = np.zeros((electrons, 3)) + 1e-24
     return ClassicalElectrons(r, np.stack((px, py, pz)), E, t0)
 
