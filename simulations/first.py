@@ -21,7 +21,7 @@ matplotlib.use('Qt5Agg')
 matplotlib.rcParams['figure.dpi'] = 150
 
 if __name__ == '__main__':
-    '''
+    """
     XFEL_intensity = lambda t: (
         0.6 * scipy.stats.norm(0, 1e-15).pdf(t)
         + 0.4 * scipy.stats.norm(3e-15, 2e-15).pdf(t)
@@ -37,18 +37,16 @@ if __name__ == '__main__':
         (1190, 1210),  # considered energy range
         (-5e-14, 7e-14),  # considered time range
         5000,  # number of electrons to generate (not yet based on cross section)
-    )'''
+    )"""
 
     pe = None
     dpi = 100
     fig = plt.figure(constrained_layout=False, figsize=(1920/dpi, 1080/dpi), dpi=dpi)
-    #fig.set_size_inches(16, 9, True)
     gs = gridspec.GridSpec(2, 2, width_ratios=[1, 8], height_ratios=[1, 5], figure=fig)
-    
+
     # time-energy map
     ax0 = fig.add_subplot(gs[0, 1:])
     ax0.set_xlabel('$t$ / fs')
-    #ax0.xaxis.labelpad = -12
     ax0.set_ylabel(r'$h\nu$ / eV')
     teim = ax0.imshow([[1], [1]], origin='lower', aspect='auto')
 
@@ -66,11 +64,9 @@ if __name__ == '__main__':
     im2 = ax2.imshow(zerodata, origin='lower', aspect='auto')
     ax1.set_title('Unstreaked')
     ax2.set_title('Streaked')
-    #loc = ticker.MaxNLocator(nbins=9, steps=(1,2,2.5,5,10), prune='both')
     for ax in (ax1, ax2):
         ax.set_ylabel(r'$E_\mathrm{kin}$ / eV')
         ax.tick_params(bottom=False, labelbottom=False)
-        #ax.yaxis.set_major_locator(loc)
 
     # marginal distributions
     axmarg1x = fig.add_subplot(subgs1[1, 0], sharex=ax1)
@@ -101,7 +97,7 @@ if __name__ == '__main__':
         global pe
         N_G = int(sliders['XFEL']['peaks'].val)
         N_e = int(sliders['simulation']['electrons'].val)
-        E_ionize = 1150  # eV
+        E_ionize = sliders['target']['binding E / eV'].val  # eV
 
         start = time.perf_counter()
 
@@ -128,7 +124,7 @@ if __name__ == '__main__':
         else:
             dur = sliders['XFEL']['width (1pk) / s'].val
             sigE = sliders['XFEL']['σ(E) (1pk) / eV'].val
-            tEmeans = (0, 1200)
+            tEmeans = (0, sliders['XFEL']['µ(E) (1pk) / eV'].val)
             # Please dont ask about this fs bullshit.. just for display purposes
             tEcov = np.diag((dur, sigE))**2
             tEcovfs = np.diag((dur*1e15, sigE))**2
@@ -206,12 +202,16 @@ if __name__ == '__main__':
     sliders_spec = {
         'XFEL': {
             'peaks':              (1,       10,    1,     1,      '%1d',   update_electrons),
-            'width (1pk) / s':   (1e-17,   1e-14, None,  1e-15,  None,    update_electrons),
-            'σ(E) (1pk) / eV':    (0.1,     10,    None,  0.5,    None,    update_electrons),
+            'width (1pk) / s':    (1e-17,   1e-14, None,  1e-15,  None,    update_electrons),
+            'µ(E) (1pk) / eV':    (800,     2000,  None,  1200,   '%.0f',    update_electrons),
+            'σ(E) (1pk) / eV':    (0.1,     10,    None,  0.5,    '%.1f',    update_electrons),
+        },
+        'target': {
+            'binding E / eV':     (500,     1500,  None,  1150,   '%.0f',    update_electrons),
         },
         'streaking': {
-            'wavelength / m':         (1e-7,    10e-6, None,  10e-6,  None,    update_streaking),
-            'width / s':       (1e-14,   1e-12, None,  3e-13,  None,    update_streaking),
+            'wavelength / m':     (1e-7,    10e-6, None,  10e-6,  None,    update_streaking),
+            'width / s':          (1e-14,   1e-12, None,  3e-13,  None,    update_streaking),
             'delay / s':          (-1e-12,  1e-12, None,  0,      None,    update_streaking),
             'energy / J':         (0,       1e-3,  None,  30e-6,  None,    update_streaking),
             'CEP':                (0,       2*π,   None,  0,     '%1.2f',  update_streaking),
@@ -222,7 +222,7 @@ if __name__ == '__main__':
             'stepsize / s':       (5e-15,   2e-14, None,  1e-14,  None,    update_streaking),
         },
 
-    #   Name                   min        max    step  start   fmt   update function
+    #        Name                  min      max    step   start   fmt       update function
     }
 
     gs_widgets = gs[:, 0].subgridspec(30, 1)
@@ -247,20 +247,6 @@ if __name__ == '__main__':
             sl.valtext.set_fontfamily('monospace')
             sliders[cat][key] = sl
 
-
-    #sl_axes = [fig.add_subplot(gs_widgets[i]) for i in range(len(sliders_spec))]
-    #
-    #for ax, key in zip(sl_axes, sliders_spec.keys()):
-    #    ax.set_zorder(10)
-    #    mi, ma, ste, sta, fmt, fun = sliders_spec[key]
-    #    if ste is None:
-    #        sl = Slider(ax, key, mi, ma, valinit=sta, valfmt='%.1e' if fmt is None else fmt)
-    #    else:
-    #        sl = Slider(ax, key, mi, ma, valinit=sta, valstep=ste, valfmt='%.1e'if fmt is None else fmt)
-    #    sl.on_changed(fun)
-    #    sl.valtext.set_fontfamily('monospace')
-    #    sliders[key] = sl
-
     frames = 400
     def animate(frame):#1e-17,     5e-15
         sliders['streaking']['CEP'].set_val(frame / frames * 2 * np.pi)
@@ -272,7 +258,6 @@ if __name__ == '__main__':
     im2.autoscale()
     plt.tight_layout(pad=1)
     plt.show()
-    #quit()
     #anim = animation.FuncAnimation(fig, animate,
     #                           frames=frames, blit=True)
     #anim.save('build/anim_cep2.mp4', fps=50, dpi=100)
