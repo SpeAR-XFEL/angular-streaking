@@ -151,13 +151,15 @@ if __name__ == '__main__':
     def update_streaking(val):
         global fb1
         start = time.perf_counter()
+        foc = sliders['streaking']['focal spot / m'].val
 
         beam = SimpleGaussianBeam(
             energy=sliders['streaking']['energy / J'].val,
             cep=sliders['streaking']['CEP'].val,
             envelope_offset=sliders['streaking']['delay / s'].val,
             wavelength=sliders['streaking']['wavelen. / m'].val,
-            duration=sliders['streaking']['width / s'].val)
+            duration=sliders['streaking']['width / s'].val,
+            focal_size=(foc, foc))
         spe = classical_lorentz_streaker(pe, beam, (0, sliders['simulation']['time / s'].val), sliders['simulation']['stepsize / s'].val)
         r, phi, theta = cartesian_to_spherical(*pe.p.T)
         sr, sphi, stheta = cartesian_to_spherical(*spe.p.T)
@@ -211,10 +213,11 @@ if __name__ == '__main__':
             'β (1pk)':                  (-1,      2,     None,  2,      '%.2f',  update_electrons),
         },
         'streaking': {
+            'focal spot / m':     (100e-6,  2e-3,  None,  5e-4,   None,    update_streaking),
             'wavelen. / m':       (1e-7,    10e-6, None,  10e-6,  None,    update_streaking),
             'width / s':          (1e-14,   1e-12, None,  3e-13,  None,    update_streaking),
             'delay / s':          (-1e-12,  1e-12, None,  0,      None,    update_streaking),
-            'energy / J':         (0,       1e-3,  None,  30e-6,  None,    update_streaking),
+            'energy / J':         (0,       1e-2,  None,  30e-6,  None,    update_streaking),
             'CEP':                (0,       2*π,   None,  0,     '%1.2f',  update_streaking),
         },
         'simulation': {
@@ -250,8 +253,9 @@ if __name__ == '__main__':
 
     frames = 400
     def animate(frame):#1e-17,     5e-15
-        sliders['streaking']['CEP'].set_val(frame / frames * 2 * np.pi)
+        #sliders['streaking']['CEP'].set_val(frame / frames * 2 * np.pi)
         #sliders['xfel dur. (1pk) / s'].set_val(frame / frames * (5e-15-1e-17) + 1e-17)
+        sliders['streaking']['focal spot / m'].set_val(frame / frames * (5e-4-1e-4) + 1e-4)
         return im1, im2, st1, st2, st3
 
     update_electrons(None)
@@ -261,4 +265,4 @@ if __name__ == '__main__':
     plt.show()
     #anim = animation.FuncAnimation(fig, animate,
     #                           frames=frames, blit=True)
-    #anim.save('build/anim_cep2.mp4', fps=50, dpi=100)
+    #anim.save('build/anim_focal.mp4', fps=50, dpi=100)

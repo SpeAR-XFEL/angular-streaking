@@ -21,8 +21,8 @@ def ionizer_simple(β, tEmean, tEcov, EB, electrons):
 
     E *= const.e  # in Joules
     px, py, pz = spherical_to_cartesian(1, θ, φ)
-    r = np.zeros((electrons, 3)) + 1e-24
-    return ClassicalElectrons(r, np.stack((px, py, pz)), E, t0)
+    r = np.random.multivariate_normal((0,0,0), np.diag((4e-4, 4e-4, 1e-12))**2, electrons) #
+    return ClassicalElectrons(r, np.vstack((px, py, pz)).T, E, t0)
 
 
 def diff_cross_section_Sauter(θ, φ, ɣ):
