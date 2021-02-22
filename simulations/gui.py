@@ -12,7 +12,6 @@ import matplotlib.gridspec as gridspec
 import matplotlib.ticker as ticker
 import matplotlib.pyplot as plt
 import matplotlib
-from tqdm import tqdm
 import time
 from numpy import pi as π
 
@@ -21,24 +20,6 @@ matplotlib.use('Qt5Agg')
 matplotlib.rcParams['figure.dpi'] = 150
 
 if __name__ == '__main__':
-    """
-    XFEL_intensity = lambda t: (
-        0.6 * scipy.stats.norm(0, 1e-15).pdf(t)
-        + 0.4 * scipy.stats.norm(3e-15, 2e-15).pdf(t)
-    )
-
-    XFEL_photon_energy = scipy.stats.norm(1200, 0.1).pdf
-
-    pe = ionizer_simple(
-        2,  # β
-        XFEL_intensity,
-        XFEL_photon_energy,
-        870.2,  # binding energy
-        (1190, 1210),  # considered energy range
-        (-5e-14, 7e-14),  # considered time range
-        5000,  # number of electrons to generate (not yet based on cross section)
-    )"""
-
     pe = None
     dpi = 100
     fig = plt.figure(constrained_layout=False, figsize=(1920/dpi, 1080/dpi), dpi=dpi)
