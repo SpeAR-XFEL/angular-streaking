@@ -1,6 +1,6 @@
 # Angular streaking simulation framework
 
-Prerequisites: Python 3.6+, Numpy, Scipy, Matplotlib, pip.
+Prerequisites: Git, Python 3.6+, Numpy, Scipy, Matplotlib, pip.
 
 To start developing, first clone the repository (go to the directory you want the project to be in first):
 
