@@ -8,5 +8,5 @@ setup(name='streaking',
       author='Arne Held, Lars Funke',
       author_email='',
       url='',
-      packages=['streaking', 'streaking.components'],
+      packages=['streaking'],
      )
