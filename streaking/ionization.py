@@ -60,4 +60,4 @@ def ionizer_Sauter(TEmap, E_ionize, N_e, polar_opening_angle=0.1):
     )
     px, py, pz = spherical_to_cartesian(1, theta, phi)
     r = np.zeros((N_e, 3)) + 1e-24
-    return ClassicalElectrons(r, np.stack((px, py, pz)), Ekin, birthtimes)
+    return ClassicalElectrons(r, np.stack((px, py, pz)).T, Ekin, birthtimes)
