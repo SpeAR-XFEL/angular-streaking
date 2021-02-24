@@ -191,7 +191,7 @@ if __name__ == '__main__':
         },
         'target': {
             'binding E / eV':     (500,     1500,  None,  1150,   '%.0f',  update_electrons),
-            'β (1pk)':                  (-1,      2,     None,  2,      '%.2f',  update_electrons),
+            'β (1pk)':            (-1,      2,     None,  2,      '%.2f',  update_electrons),
         },
         'streaking': {
             'focal spot / m':     (100e-6,  2e-3,  None,  5e-4,   None,    update_streaking),

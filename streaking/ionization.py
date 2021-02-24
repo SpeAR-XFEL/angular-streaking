@@ -21,7 +21,7 @@ def ionizer_simple(β, tEmean, tEcov, EB, electrons):
 
     E *= const.e  # in Joules
     px, py, pz = spherical_to_cartesian(1, θ, φ)
-    r = np.random.multivariate_normal((0,0,0), np.diag((4e-4, 4e-4, 1e-12))**2, electrons) #
+    r = np.random.multivariate_normal((0,0,0), np.diag((1e-4, 1e-4, 1e-12))**2, electrons) #
     return ClassicalElectrons(r, np.vstack((px, py, pz)).T, E, t0)
 
 

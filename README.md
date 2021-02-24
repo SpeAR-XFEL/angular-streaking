@@ -18,4 +18,6 @@ A good starting point is to now start the GUI script
 ```
 python angular_streaking/simulations/gui.py
 ```
-and play around a little.
+and play around a little. To start developing, a good starting point
+may be `examples/simple.py`, where a very basic simulation using the 
+library is implemented.
