@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.constants as const
-
+import copy
 
 class SimpleGaussianBeam:
     """Calculates electric and magnetic field of a simple
@@ -78,6 +78,7 @@ class SimpleGaussianBeam:
         )
         self.envelope_offset = envelope_offset
         self.polarization = polarization
+        self.other_beams_list = []
 
     def fields(self, x, y, z, t):
         """Calculates the electric and magnetic fields of the gaussian beam
@@ -139,5 +140,16 @@ class SimpleGaussianBeam:
             (np.cos(phase), np.sin(phase), np.zeros_like(phase))
         )
 
-        E_field = central_E_field * offaxis_pulsed_factor * polarization_vec
-        return E_field.T, np.cross([0, 0, 1], E_field.T) / const.c
+        E_field = (central_E_field * offaxis_pulsed_factor * polarization_vec).T
+        B_field = np.cross([0, 0, 1], E_field) / const.c
+
+        for otherbeam in self.other_beams_list:
+            E, B = otherbeam.fields(x, y, z, t)
+            E_field += E
+            B_field += B
+        return E_field, B_field
+
+    def __add__(self, other):
+        newbeam = copy.copy(self)
+        newbeam.other_beams_list.append(other)
+        return newbeam

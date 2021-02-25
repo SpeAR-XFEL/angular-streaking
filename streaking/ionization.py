@@ -10,7 +10,7 @@ def diff_cross_section_dipole(φ, β):
     return 1 + β * 1 / 2 * (3 * np.cos(φ) ** 2 - 1)
 
 
-def ionizer_simple(β, tEmean, tEcov, EB, electrons):
+def ionizer_simple(β, tEmean, tEcov, EB, xfel_spotsize, electrons):
     """
     Generate randomly distributed photoelectrons
     """
@@ -21,7 +21,7 @@ def ionizer_simple(β, tEmean, tEcov, EB, electrons):
 
     E *= const.e  # in Joules
     px, py, pz = spherical_to_cartesian(1, θ, φ)
-    r = np.random.multivariate_normal((0,0,0), np.diag((1e-4, 1e-4, 1e-12))**2, electrons) #
+    r = np.random.multivariate_normal((0,0,0), np.diag((xfel_spotsize, xfel_spotsize, 0))**2, electrons) #
     return ClassicalElectrons(r, np.vstack((px, py, pz)).T, E, t0)
 
 

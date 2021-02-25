@@ -107,16 +107,19 @@ if __name__ == '__main__':
             dur = sliders['XFEL']['width (1pk) / s'].val
             sigE = sliders['XFEL']['σ(E) (1pk) / eV'].val
             tEmeans = (0, sliders['XFEL']['µ(E) (1pk) / eV'].val)
+            chirp = sliders['XFEL']['chirp (1pk)'].val
             # Please dont ask about this fs bullshit.. just for display purposes
-            tEcov = np.diag((dur, sigE))**2
-            tEcovfs = np.diag((dur*1e15, sigE))**2
-            pe = ionizer_simple(β, tEmeans, tEcov, E_ionize, N_e)
+            tEcov = np.array(((dur**2, chirp * dur * sigE), (chirp * dur * sigE, sigE**2)))
+            offdiag = chirp * dur * 1e15 * sigE
+            tEcovfs = np.array((((dur*1e15)**2, offdiag), (offdiag, sigE**2))).T
+            print(tEcovfs)
+            pe = ionizer_simple(β, tEmeans, tEcov, E_ionize, sliders['XFEL']['focal spot / m'], N_e)
             sigma_range = 4
             rangeI = (-sigma_range*dur, sigma_range*dur)
             rangeIfs = (-sigma_range*dur*1e15, sigma_range*dur*1e15)
             rangeE = (-sigma_range*sigE + tEmeans[1], sigma_range*sigE + tEmeans[1])
             A, B = np.meshgrid(np.linspace(*rangeIfs, 300), np.linspace(*rangeE, 300))
-            imdata = scipy.stats.multivariate_normal(tEmeans, tEcovfs, allow_singular=True).pdf(np.dstack((A, B)))
+            imdata = scipy.stats.multivariate_normal(tEmeans, tEcovfs).pdf(np.dstack((A, B)))
             imextent = (*rangeIfs, *rangeE)
 
         diff = time.perf_counter() - start
@@ -132,16 +135,28 @@ if __name__ == '__main__':
     def update_streaking(val):
         global fb1
         start = time.perf_counter()
-        foc = sliders['streaking']['focal spot / m'].val
+        foc = sliders['streaking laser 1']['focal spot / m'].val
 
         beam = SimpleGaussianBeam(
-            energy=sliders['streaking']['energy / J'].val,
-            cep=sliders['streaking']['CEP'].val,
-            envelope_offset=sliders['streaking']['delay / s'].val,
-            wavelength=sliders['streaking']['wavelen. / m'].val,
-            duration=sliders['streaking']['width / s'].val,
+            energy=sliders['streaking laser 1']['energy / J'].val,
+            cep=sliders['streaking laser 1']['CEP'].val,
+            envelope_offset=sliders['streaking laser 1']['delay / s'].val,
+            wavelength=sliders['streaking laser 1']['wavelen. / m'].val,
+            duration=sliders['streaking laser 1']['width / s'].val,
             focal_size=(foc, foc))
-        spe = classical_lorentz_streaker(pe, beam, (0, sliders['simulation']['time / s'].val), sliders['simulation']['stepsize / s'].val)
+        foc2 = sliders['streaking laser 2']['focal spot / m'].val
+        beam2 = SimpleGaussianBeam(
+            energy=sliders['streaking laser 2']['energy / J'].val,
+            cep=sliders['streaking laser 2']['CEP'].val,
+            envelope_offset=sliders['streaking laser 2']['delay / s'].val,
+            wavelength=sliders['streaking laser 2']['wavelen. / m'].val,
+            duration=sliders['streaking laser 2']['width / s'].val,
+            focal_size=(foc, foc))
+
+        #sumb = beam + beam2
+        #print(sumb.fields(0,0,0,0))
+        #quit()
+        spe = classical_lorentz_streaker(pe, beam + beam2, (0, sliders['simulation']['time / s'].val), sliders['simulation']['stepsize / s'].val)
         r, phi, theta = cartesian_to_spherical(*pe.p.T)
         sr, sphi, stheta = cartesian_to_spherical(*spe.p.T)
         rsr, _, _ = cartesian_to_spherical(*spe.r.T)
@@ -188,17 +203,27 @@ if __name__ == '__main__':
             'width (1pk) / s':    (1e-17,   1e-14, None,  1e-15,  None,    update_electrons),
             'µ(E) (1pk) / eV':    (800,     2000,  None,  1200,   '%.0f',  update_electrons),
             'σ(E) (1pk) / eV':    (0.1,     10,    None,  0.5,    '%.1f',  update_electrons),
+            'chirp (1pk)':        (-0.999,  0.999, None,  0,      '%.1f',  update_electrons),
+            'focal spot / m':     (1e-6,    1e-4,  None,  2e-5,   None,    update_electrons),
         },
         'target': {
             'binding E / eV':     (500,     1500,  None,  1150,   '%.0f',  update_electrons),
             'β (1pk)':            (-1,      2,     None,  2,      '%.2f',  update_electrons),
         },
-        'streaking': {
+        'streaking laser 1': {
             'focal spot / m':     (100e-6,  2e-3,  None,  5e-4,   None,    update_streaking),
             'wavelen. / m':       (1e-7,    10e-6, None,  10e-6,  None,    update_streaking),
             'width / s':          (1e-14,   1e-12, None,  3e-13,  None,    update_streaking),
             'delay / s':          (-1e-12,  1e-12, None,  0,      None,    update_streaking),
             'energy / J':         (0,       1e-2,  None,  30e-6,  None,    update_streaking),
+            'CEP':                (0,       2*π,   None,  0,     '%1.2f',  update_streaking),
+        },
+        'streaking laser 2': {
+            'focal spot / m':     (100e-6,  2e-3,  None,  5e-4,   None,    update_streaking),
+            'wavelen. / m':       (1e-7,    10e-6, None,  10e-6,  None,    update_streaking),
+            'width / s':          (1e-14,   1e-12, None,  3e-13,  None,    update_streaking),
+            'delay / s':          (-1e-12,  1e-12, None,  0,      None,    update_streaking),
+            'energy / J':         (0,       1e-2,  None,  0,  None,    update_streaking),
             'CEP':                (0,       2*π,   None,  0,     '%1.2f',  update_streaking),
         },
         'simulation': {
@@ -234,9 +259,9 @@ if __name__ == '__main__':
 
     frames = 400
     def animate(frame):#1e-17,     5e-15
-        #sliders['streaking']['CEP'].set_val(frame / frames * 2 * np.pi)
+        #sliders['streaking laser 1']['CEP'].set_val(frame / frames * 2 * np.pi)
         #sliders['xfel dur. (1pk) / s'].set_val(frame / frames * (5e-15-1e-17) + 1e-17)
-        sliders['streaking']['focal spot / m'].set_val(frame / frames * (5e-4-1e-4) + 1e-4)
+        sliders['streaking laser 1']['focal spot / m'].set_val(frame / frames * (5e-4-1e-4) + 1e-4)
         return im1, im2, st1, st2, st3
 
     update_electrons(None)
