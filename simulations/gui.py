@@ -21,6 +21,7 @@ matplotlib.rcParams['figure.dpi'] = 150
 
 if __name__ == '__main__':
     pe = None
+    spe = None
     dpi = 100
     fig = plt.figure(constrained_layout=False, figsize=(1920/dpi, 1080/dpi), dpi=dpi)
     gs = gridspec.GridSpec(2, 2, width_ratios=[1, 8], height_ratios=[1, 5], figure=fig)
@@ -36,7 +37,7 @@ if __name__ == '__main__':
     subgs2 = subgs12[0, 1].subgridspec(3, 2, hspace=0, wspace=0, height_ratios=(5, 2, 1), width_ratios=(4,1))
 
     # 2d histograms for KE over angle
-    phi_bin_count = 64
+    phi_bin_count = 32
     bins = [np.linspace(0, 2 * np.pi, phi_bin_count+1), 50]
     ax1 = fig.add_subplot(subgs1[0, 0])
     ax2 = fig.add_subplot(subgs2[0, 0])
@@ -75,7 +76,7 @@ if __name__ == '__main__':
         ax.set_xlim(bins[0][0], bins[0][-1])
 
     def update_electrons(val):
-        global pe
+        global pe, spe
         N_G = int(sliders['XFEL']['peaks'].val)
         N_e = int(sliders['simulation']['electrons'].val)
         E_ionize = sliders['target']['binding E / eV'].val  # eV
@@ -112,8 +113,7 @@ if __name__ == '__main__':
             tEcov = np.array(((dur**2, chirp * dur * sigE), (chirp * dur * sigE, sigE**2)))
             offdiag = chirp * dur * 1e15 * sigE
             tEcovfs = np.array((((dur*1e15)**2, offdiag), (offdiag, sigE**2))).T
-            print(tEcovfs)
-            pe = ionizer_simple(β, tEmeans, tEcov, E_ionize, sliders['XFEL']['focal spot / m'], N_e)
+            pe = ionizer_simple(β, tEmeans, tEcov, E_ionize, sliders['XFEL']['focal spot / m'].val, N_e)
             sigma_range = 4
             rangeI = (-sigma_range*dur, sigma_range*dur)
             rangeIfs = (-sigma_range*dur*1e15, sigma_range*dur*1e15)
@@ -130,10 +130,10 @@ if __name__ == '__main__':
         teim.set_extent(imextent)
         teim.autoscale()
 
-        update_streaking(None)
+        return update_streaking(None)
 
     def update_streaking(val):
-        global fb1
+        global pe, spe
         start = time.perf_counter()
         foc = sliders['streaking laser 1']['focal spot / m'].val
 
@@ -145,31 +145,44 @@ if __name__ == '__main__':
             duration=sliders['streaking laser 1']['width / s'].val,
             focal_size=(foc, foc))
         foc2 = sliders['streaking laser 2']['focal spot / m'].val
-        beam2 = SimpleGaussianBeam(
-            energy=sliders['streaking laser 2']['energy / J'].val,
-            cep=sliders['streaking laser 2']['CEP'].val,
-            envelope_offset=sliders['streaking laser 2']['delay / s'].val,
-            wavelength=sliders['streaking laser 2']['wavelen. / m'].val,
-            duration=sliders['streaking laser 2']['width / s'].val,
-            focal_size=(foc, foc))
 
-        #sumb = beam + beam2
-        #print(sumb.fields(0,0,0,0))
-        #quit()
-        spe = classical_lorentz_streaker(pe, beam + beam2, (0, sliders['simulation']['time / s'].val), sliders['simulation']['stepsize / s'].val)
-        r, phi, theta = cartesian_to_spherical(*pe.p.T)
-        sr, sphi, stheta = cartesian_to_spherical(*spe.p.T)
-        rsr, _, _ = cartesian_to_spherical(*spe.r.T)
-
+        if sliders['streaking laser 2']['energy / J'].val > 0:
+            beam = beam + SimpleGaussianBeam(
+                energy=sliders['streaking laser 2']['energy / J'].val,
+                cep=sliders['streaking laser 2']['CEP'].val,
+                envelope_offset=sliders['streaking laser 2']['delay / s'].val,
+                wavelength=sliders['streaking laser 2']['wavelen. / m'].val,
+                duration=sliders['streaking laser 2']['width / s'].val,
+                focal_size=(foc, foc))
+        
+        spe = classical_lorentz_streaker(pe, beam, (0, sliders['simulation']['time / s'].val), sliders['simulation']['stepsize / s'].val)
         diff = time.perf_counter()-start
         per = diff/sliders['simulation']['electrons'].val
         print(f'Streaking took {diff:.1f} s, {per*1e6:.1f} µs / e-')
 
+        return update_detector(None)
+
+    def update_detector(val):
+        global fb1
+        r, theta, phi  = cartesian_to_spherical(*pe.p.T)
+        sr, stheta, sphi = cartesian_to_spherical(*spe.p.T)
+        rsr, _, _ = cartesian_to_spherical(*spe.r.T)
+
+        acc = sliders['detector'][r'$\vartheta$ accept. / rad'].val / 2
+        center = sliders['detector'][r'$\vartheta$ center / rad'].val
+        pih = np.pi / 2
+
+        mask1 = np.abs((theta - center) % np.pi) < acc
+        mask2 = np.abs((stheta - center) % np.pi) < acc
+
+        phibins = int(sliders['detector'][r'$\varphi$ bins'].val)
+        bins = (np.linspace(0, 2 * np.pi, phibins + 1), 50)
+
         data1, x1, y1 = np.histogram2d(
-            (theta + np.pi / 2) % (2 * np.pi), pe.Ekin() / const.e, bins=bins
+            (phi[mask1] + np.pi / 2) % (2 * np.pi), pe.Ekin()[mask1] / const.e, bins=bins
         )
         data2, x2, y2 = np.histogram2d(
-            (stheta + np.pi / 2) % (2 * np.pi), spe.Ekin() / const.e, bins=bins
+            (sphi[mask2] + np.pi / 2) % (2 * np.pi), spe.Ekin()[mask2] / const.e, bins=bins
         )
         im1.set_data(data1.T)
         im2.set_data(data2.T)
@@ -181,10 +194,10 @@ if __name__ == '__main__':
         marg2x = np.append(data2.T.sum(axis=0), 0)
         marg1y = np.append(data1.T.sum(axis=1), 0)
         marg2y = np.append(data2.T.sum(axis=1), 0)
-        st1.set_ydata(marg1x)
-        st2.set_ydata(marg1x)
-        st3.set_ydata(marg2x)
-        st4.set_ydata(marg2x - marg1x)
+        st1.set_data(x1, marg1x)
+        st2.set_data(x1, marg1x)
+        st3.set_data(x2, marg2x)
+        st4.set_data(x2, marg2x - marg1x)
         axdiffx.relim()
         axdiffx.autoscale_view()
         fb1.remove()
@@ -195,7 +208,6 @@ if __name__ == '__main__':
             ax.relim()
             ax.autoscale_view(scaley=(i >= 2), scalex=(i < 2))
         return im1, im2, st1, st2, st3, st4, st5, st6
-
     # Sliders galore!
     sliders_spec = {
         'XFEL': {
@@ -208,14 +220,14 @@ if __name__ == '__main__':
         },
         'target': {
             'binding E / eV':     (500,     1500,  None,  1150,   '%.0f',  update_electrons),
-            'β (1pk)':            (-1,      2,     None,  2,      '%.2f',  update_electrons),
+            'β (1pk)':            (-1,      2,     None,  0,      '%.2f',  update_electrons),
         },
         'streaking laser 1': {
             'focal spot / m':     (100e-6,  2e-3,  None,  5e-4,   None,    update_streaking),
             'wavelen. / m':       (1e-7,    10e-6, None,  10e-6,  None,    update_streaking),
             'width / s':          (1e-14,   1e-12, None,  3e-13,  None,    update_streaking),
             'delay / s':          (-1e-12,  1e-12, None,  0,      None,    update_streaking),
-            'energy / J':         (0,       1e-2,  None,  30e-6,  None,    update_streaking),
+            'energy / J':         (0,       1e-3,  None,  30e-6,  None,    update_streaking),
             'CEP':                (0,       2*π,   None,  0,     '%1.2f',  update_streaking),
         },
         'streaking laser 2': {
@@ -223,19 +235,24 @@ if __name__ == '__main__':
             'wavelen. / m':       (1e-7,    10e-6, None,  10e-6,  None,    update_streaking),
             'width / s':          (1e-14,   1e-12, None,  3e-13,  None,    update_streaking),
             'delay / s':          (-1e-12,  1e-12, None,  0,      None,    update_streaking),
-            'energy / J':         (0,       1e-2,  None,  0,  None,    update_streaking),
+            'energy / J':         (0,       1e-3,  None,  0,      None,    update_streaking),
             'CEP':                (0,       2*π,   None,  0,     '%1.2f',  update_streaking),
         },
         'simulation': {
-            'electrons':          (1e3,     5e5,   1,     5e4,    None,    update_electrons),
+            'electrons':          (1e3,     5e5,   1,     2e5,    None,    update_electrons),
             'time / s':           (0,       1e-11, None,  1e-12,  None,    update_streaking),
             'stepsize / s':       (5e-15,   2e-14, None,  1e-14,  None,    update_streaking),
         },
+        'detector': {
+    r'$\vartheta$ accept. / rad': (0.01,    np.pi,  None,  0.25,  '%1.2f', update_detector),
+            r'$\vartheta$ center / rad': (0, np.pi, None, np.pi/2, '%1.2f', update_detector),
+            r'$\varphi$ bins':   (8,       64,    8,     32,     '%1d',   update_detector),
+        }
 
     #        Name                  min      max    step   start   fmt       update function
     }
 
-    gs_widgets = gs[:, 0].subgridspec(30, 1)
+    gs_widgets = gs[:, 0].subgridspec(32, 1)
     idx = 0
     sliders = {}
     for cat in sliders_spec.keys():
@@ -258,17 +275,24 @@ if __name__ == '__main__':
             sliders[cat][key] = sl
 
     frames = 400
+    anirange = np.linspace(3.5e-16, 3.5e-15, frames)
     def animate(frame):#1e-17,     5e-15
         #sliders['streaking laser 1']['CEP'].set_val(frame / frames * 2 * np.pi)
-        #sliders['xfel dur. (1pk) / s'].set_val(frame / frames * (5e-15-1e-17) + 1e-17)
-        sliders['streaking laser 1']['focal spot / m'].set_val(frame / frames * (5e-4-1e-4) + 1e-4)
+        sliders['XFEL']['width (1pk) / s'].set_val(anirange[frame])
+        #sliders['streaking laser 1']['focal spot / m'].set_val(frame / frames * (5e-4-1e-4) + 1e-4)
         return im1, im2, st1, st2, st3
 
     update_electrons(None)
     im1.autoscale()
     im2.autoscale()
     plt.tight_layout(pad=1)
+
+    figManager = plt.get_current_fig_manager()
+    figManager.window.move(0, 0)
+    figManager.window.showMaximized()
+    figManager.window.setFocus()
+
     plt.show()
     #anim = animation.FuncAnimation(fig, animate,
     #                           frames=frames, blit=True)
-    #anim.save('build/anim_focal.mp4', fps=50, dpi=100)
+    #anim.save('build/anim_dur_n.mp4', fps=25, dpi=100)

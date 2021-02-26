@@ -15,13 +15,13 @@ def ionizer_simple(β, tEmean, tEcov, EB, xfel_spotsize, electrons):
     Generate randomly distributed photoelectrons
     """
     φ = rejection_sampling(diff_cross_section_dipole, (-π, π), electrons, (β,))
-    θ = np.zeros(electrons) + π/2 # fixed for now
+    θ = np.random.uniform(0, np.pi, electrons)#np.zeros(electrons) + π/2 # fixed for now
     t0, E = np.random.multivariate_normal(tEmean, tEcov, electrons).T
     E -= EB
 
     E *= const.e  # in Joules
     px, py, pz = spherical_to_cartesian(1, θ, φ)
-    r = np.random.multivariate_normal((0,0,0), np.diag((xfel_spotsize, xfel_spotsize, 0))**2, electrons) #
+    r = np.random.multivariate_normal((0,0,0), np.diag((xfel_spotsize, xfel_spotsize, 1e-15))**2, electrons) #
     return ClassicalElectrons(r, np.vstack((px, py, pz)).T, E, t0)
 
 
