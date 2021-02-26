@@ -24,7 +24,7 @@ if __name__ == '__main__':
     spe = None
     dpi = 100
     fig = plt.figure(constrained_layout=False, figsize=(1920/dpi, 1080/dpi), dpi=dpi)
-    gs = gridspec.GridSpec(2, 2, width_ratios=[1, 8], height_ratios=[1, 5], figure=fig)
+    gs = gridspec.GridSpec(2, 2, width_ratios=[1, 8], height_ratios=[1, 6], figure=fig)
 
     # time-energy map
     ax0 = fig.add_subplot(gs[0, 1:])
@@ -33,15 +33,15 @@ if __name__ == '__main__':
     teim = ax0.imshow([[1], [1]], origin='lower', aspect='auto')
 
     subgs12 = gs[1, 1].subgridspec(1, 2, wspace=0.1)
-    subgs1 = subgs12[0, 0].subgridspec(3, 2, hspace=0, wspace=0, height_ratios=(5, 2, 1), width_ratios=(4,1))
-    subgs2 = subgs12[0, 1].subgridspec(3, 2, hspace=0, wspace=0, height_ratios=(5, 2, 1), width_ratios=(4,1))
+    subgs1 = subgs12[0, 0].subgridspec(3, 2, hspace=0, wspace=0, height_ratios=(5, 2, 5), width_ratios=(4,1))
+    subgs2 = subgs12[0, 1].subgridspec(3, 2, hspace=0, wspace=0, height_ratios=(5, 2, 5), width_ratios=(4,1))
 
     # 2d histograms for KE over angle
-    phi_bin_count = 32
-    bins = [np.linspace(0, 2 * np.pi, phi_bin_count+1), 50]
+    #phi_bin_count = 32
+    #bins = [np.linspace(0, 2 * np.pi, phi_bin_count+1), 50]
     ax1 = fig.add_subplot(subgs1[0, 0])
     ax2 = fig.add_subplot(subgs2[0, 0])
-    zerodata = np.zeros((len(bins[0]), bins[1]))
+    zerodata = np.zeros((1, 1))
     im1 = ax1.imshow(zerodata, origin='lower', aspect='auto')
     im2 = ax2.imshow(zerodata, origin='lower', aspect='auto')
     ax1.set_title('Unstreaked')
@@ -50,30 +50,39 @@ if __name__ == '__main__':
         ax.set_ylabel(r'$E_\mathrm{kin}$ / eV')
         ax.tick_params(bottom=False, labelbottom=False)
 
+    # 2d histograms azimuthal and polar angle
+    ax3 = fig.add_subplot(subgs1[2, 0])
+    ax4 = fig.add_subplot(subgs2[2, 0])
+    zerodata = np.zeros((1, 1))
+    im3 = ax3.imshow(zerodata, origin='lower', aspect='auto')
+    im4 = ax4.imshow(zerodata, origin='lower', aspect='auto')
+    sp3 = ax3.axhspan(1, 1.5, alpha=0.25, color='C3')
+    sp4 = ax4.axhspan(1, 1.5, alpha=0.25, color='C3')
+
+    for ax in (ax3,ax4):
+        ax.set_xlabel(r'$\varphi$')
+        ax.set_xlim(0, 2 * np.pi)
+
     # marginal distributions
     axmarg1x = fig.add_subplot(subgs1[1, 0], sharex=ax1)
     axmarg2x = fig.add_subplot(subgs2[1, 0], sharex=ax2, sharey=axmarg1x)
-    axdiffx  = fig.add_subplot(subgs2[2, 0], sharex=ax2)
+    #axdiffx  = fig.add_subplot(subgs2[2, 0], sharex=ax2)
     axmarg1y = fig.add_subplot(subgs1[0, 1], sharey=ax1)
     axmarg2y = fig.add_subplot(subgs2[0, 1], sharey=ax2)
-    margx = np.zeros(len(bins[0]))
-    st1, = axmarg1x.step(bins[0], margx, where='post')
-    st2, = axmarg2x.step(bins[0], margx, where='post', color='C0', alpha=1)
-    st3, = axmarg2x.step(bins[0], margx, where='post', color='C1', alpha=0.5)
-    fb1 = axmarg2x.fill_between(bins[0], margx, margx, step='pre', alpha=0.5, color='C1')
-    axdiffx.axhline(0, color='k', lw=1)
-    st4, = axdiffx.step(bins[0], margx, where='post', color='C1')
-    loc = ticker.FixedLocator((0,))
-    axdiffx.yaxis.set_major_locator(loc)
+    st1, = axmarg1x.step([0,], [0,], where='post')
+    st2, = axmarg2x.step([0,], [0,], where='post', color='C0', alpha=1)
+    st3, = axmarg2x.step([0,], [0,], where='post', color='C1', alpha=1)
+    #fb1 = axmarg2x.fill_between(bins[0], margx, margx, step='pre', alpha=0.5, color='C1')
+    #axdiffx.axhline(0, color='k', lw=1)
+    #st4, = axdiffx.step(bins[0], margx, where='post', color='C1')
+    #loc = ticker.FixedLocator((0,))
+    #axdiffx.yaxis.set_major_locator(loc)
     st5, = axmarg1y.plot([1], [1], color='C0', drawstyle='steps-pre')
     st6, = axmarg2y.plot([1], [1], color='C0', drawstyle='steps-pre')
     axmarg2x.tick_params(bottom=False, labelbottom=False, left=False, labelleft=False)
-    axmarg1x.tick_params(left=False, labelleft=False)
+    axmarg1x.tick_params(bottom=False, labelbottom=False, left=False, labelleft=False)
     axmarg1y.tick_params(bottom=False, labelbottom=False, left=False, labelleft=False)
     axmarg2y.tick_params(bottom=False, labelbottom=False, left=False, labelleft=False)
-    for ax in (axmarg1x, axdiffx):
-        ax.set_xlabel(r'$\varphi$')
-        ax.set_xlim(bins[0][0], bins[0][-1])
 
     def update_electrons(val):
         global pe, spe
@@ -163,26 +172,32 @@ if __name__ == '__main__':
         return update_detector(None)
 
     def update_detector(val):
-        global fb1
+        global fb1, sp3, sp4
         r, theta, phi  = cartesian_to_spherical(*pe.p.T)
         sr, stheta, sphi = cartesian_to_spherical(*spe.p.T)
         rsr, _, _ = cartesian_to_spherical(*spe.r.T)
 
-        acc = sliders['detector'][r'$\vartheta$ accept. / rad'].val / 2
-        center = sliders['detector'][r'$\vartheta$ center / rad'].val
-        pih = np.pi / 2
+        acc = sliders['detector'][r'ϑ accept. / rad'].val / 2
+        center = sliders['detector'][r'ϑ center / rad'].val
+
+        sp3.remove()
+        sp4.remove()
+        sp3 = ax3.axhspan(center + acc, center - acc, alpha=0.25, color='C3')
+        sp4 = ax4.axhspan(center + acc, center - acc, alpha=0.25, color='C3')
 
         mask1 = np.abs((theta - center) % np.pi) < acc
         mask2 = np.abs((stheta - center) % np.pi) < acc
 
-        phibins = int(sliders['detector'][r'$\varphi$ bins'].val)
-        bins = (np.linspace(0, 2 * np.pi, phibins + 1), 50)
+        phibins = int(sliders['detector'][r'φ bins'].val)
+        thetabins = int(sliders['detector'][r'ϑ bins'].val)
+        kebins = (np.linspace(0, 2 * np.pi, phibins + 1), 50)
+        angbins = (kebins[0], np.linspace(0, np.pi, thetabins + 1))
 
         data1, x1, y1 = np.histogram2d(
-            (phi[mask1] + np.pi / 2) % (2 * np.pi), pe.Ekin()[mask1] / const.e, bins=bins
+            (phi[mask1] + np.pi / 2) % (2 * np.pi), pe.Ekin()[mask1] / const.e, bins=kebins
         )
         data2, x2, y2 = np.histogram2d(
-            (sphi[mask2] + np.pi / 2) % (2 * np.pi), spe.Ekin()[mask2] / const.e, bins=bins
+            (sphi[mask2] + np.pi / 2) % (2 * np.pi), spe.Ekin()[mask2] / const.e, bins=kebins
         )
         im1.set_data(data1.T)
         im2.set_data(data2.T)
@@ -190,6 +205,20 @@ if __name__ == '__main__':
         im2.set_extent((x2[0], x2[-1], y2[0], y2[-1]))
         im1.autoscale()
         im2.autoscale()
+
+        data3, x3, y3 = np.histogram2d(
+            (phi + np.pi / 2) % (2 * np.pi), theta, bins=angbins
+        )
+        data4, x4, y4 = np.histogram2d(
+            (sphi + np.pi / 2) % (2 * np.pi), stheta, bins=angbins
+        )
+        im3.set_data(data3.T)
+        im4.set_data(data4.T)
+        im3.set_extent((x3[0], x3[-1], y3[0], y3[-1]))
+        im4.set_extent((x4[0], x4[-1], y4[0], y4[-1]))
+        im3.autoscale()
+        im4.autoscale()
+
         marg1x = np.append(data1.T.sum(axis=0), 0)
         marg2x = np.append(data2.T.sum(axis=0), 0)
         marg1y = np.append(data1.T.sum(axis=1), 0)
@@ -197,17 +226,17 @@ if __name__ == '__main__':
         st1.set_data(x1, marg1x)
         st2.set_data(x1, marg1x)
         st3.set_data(x2, marg2x)
-        st4.set_data(x2, marg2x - marg1x)
-        axdiffx.relim()
-        axdiffx.autoscale_view()
-        fb1.remove()
-        fb1 = axmarg2x.fill_between(x2, marg1x, marg2x, step='post', alpha=0.5, color='C1')
+        #st4.set_data(x2, marg2x - marg1x)
+        #axmarg1x.relim()
+        #axmarg1x.autoscale_view()
+        #fb1.remove()
+        #fb1 = axmarg2x.fill_between(x2, marg1x, marg2x, step='post', alpha=0.5, color='C1')
         st5.set_data(marg1y, y1)
         st6.set_data(marg2y, y2)
         for i, ax in enumerate((axmarg1y, axmarg2y, axmarg1x, axmarg2x)):
             ax.relim()
             ax.autoscale_view(scaley=(i >= 2), scalex=(i < 2))
-        return im1, im2, st1, st2, st3, st4, st5, st6
+        return im1, im2, st1, st2, st3, st5, st6
     # Sliders galore!
     sliders_spec = {
         'XFEL': {
@@ -244,15 +273,16 @@ if __name__ == '__main__':
             'stepsize / s':       (5e-15,   2e-14, None,  1e-14,  None,    update_streaking),
         },
         'detector': {
-    r'$\vartheta$ accept. / rad': (0.01,    np.pi,  None,  0.25,  '%1.2f', update_detector),
-            r'$\vartheta$ center / rad': (0, np.pi, None, np.pi/2, '%1.2f', update_detector),
-            r'$\varphi$ bins':   (8,       64,    8,     32,     '%1d',   update_detector),
+            r'ϑ accept. / rad':   (0.01,    np.pi,  None,  0.25,  '%1.2f', update_detector),
+            r'ϑ center / rad':    (0,       np.pi,  None,  np.pi/2,'%1.2f',update_detector),
+            r'φ bins':            (8,       64,     8,     32,    '%1d',   update_detector),
+            r'ϑ bins':            (8,       64,     8,     32,    '%1d',   update_detector),
         }
 
     #        Name                  min      max    step   start   fmt       update function
     }
 
-    gs_widgets = gs[:, 0].subgridspec(32, 1)
+    gs_widgets = gs[:, 0].subgridspec(33, 1)
     idx = 0
     sliders = {}
     for cat in sliders_spec.keys():

@@ -2,7 +2,7 @@ import numpy as np
 import scipy.constants as const
 from streaking.electrons import ClassicalElectrons
 from streaking.stats import rejection_sampling, rejection_sampling_nD
-from streaking.conversions import spherical_to_cartesian
+from streaking.conversions import spherical_to_cartesian, cartesian_to_spherical
 from numpy import pi as π
 
 
@@ -14,13 +14,15 @@ def ionizer_simple(β, tEmean, tEcov, EB, xfel_spotsize, electrons):
     """
     Generate randomly distributed photoelectrons
     """
-    φ = rejection_sampling(diff_cross_section_dipole, (-π, π), electrons, (β,))
-    θ = np.random.uniform(0, np.pi, electrons)#np.zeros(electrons) + π/2 # fixed for now
     t0, E = np.random.multivariate_normal(tEmean, tEcov, electrons).T
     E -= EB
-
     E *= const.e  # in Joules
-    px, py, pz = spherical_to_cartesian(1, θ, φ)
+
+    ϑ, φ = rejection_sampling_nD(diff_cross_section_Sauter_lowEnergy, ((-π, π), (0, π)), electrons)
+    #φ = np.random.uniform(0, np.pi, electrons)#np.zeros(electrons) + π/2 # fixed for now
+    px, py, pz = spherical_to_cartesian(1, ϑ, φ)
+    
+
     r = np.random.multivariate_normal((0,0,0), np.diag((xfel_spotsize, xfel_spotsize, 1e-15))**2, electrons) #
     return ClassicalElectrons(r, np.vstack((px, py, pz)).T, E, t0)
 
