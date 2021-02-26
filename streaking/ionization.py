@@ -18,11 +18,12 @@ def ionizer_simple(β, tEmean, tEcov, EB, xfel_spotsize, electrons):
     E -= EB
     E *= const.e  # in Joules
 
-    ϑ, φ = rejection_sampling_nD(diff_cross_section_Sauter_lowEnergy, ((-π, π), (0, π)), electrons)
-    #φ = np.random.uniform(0, np.pi, electrons)#np.zeros(electrons) + π/2 # fixed for now
-    px, py, pz = spherical_to_cartesian(1, ϑ, φ)
+    if int(β) == 2:
+        ϑ, φ = rejection_sampling_nD(diff_cross_section_Sauter_lowEnergy, ((-π, π), (0, π)), electrons)
+        px, py, pz = spherical_to_cartesian(1, ϑ, φ)
+    else:
+        px, py, pz = np.random.normal(size=(3, electrons)) # ClassicalElectrons normalizes this
     
-
     r = np.random.multivariate_normal((0,0,0), np.diag((xfel_spotsize, xfel_spotsize, 1e-15))**2, electrons) #
     return ClassicalElectrons(r, np.vstack((px, py, pz)).T, E, t0)
 

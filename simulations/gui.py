@@ -182,8 +182,8 @@ if __name__ == '__main__':
 
         sp3.remove()
         sp4.remove()
-        sp3 = ax3.axhspan(center + acc, center - acc, alpha=0.25, color='C3')
-        sp4 = ax4.axhspan(center + acc, center - acc, alpha=0.25, color='C3')
+        sp3 = ax3.axhspan(center + acc, center - acc, alpha=0.2, color='C3')
+        sp4 = ax4.axhspan(center + acc, center - acc, alpha=0.2, color='C3')
 
         mask1 = np.abs((theta - center) % np.pi) < acc
         mask2 = np.abs((stheta - center) % np.pi) < acc
@@ -249,7 +249,7 @@ if __name__ == '__main__':
         },
         'target': {
             'binding E / eV':     (500,     1500,  None,  1150,   '%.0f',  update_electrons),
-            'β (1pk)':            (-1,      2,     None,  0,      '%.2f',  update_electrons),
+            'β (1pk)':            (0,       2,     2,     2,      '%1d',   update_electrons),
         },
         'streaking laser 1': {
             'focal spot / m':     (100e-6,  2e-3,  None,  5e-4,   None,    update_streaking),
