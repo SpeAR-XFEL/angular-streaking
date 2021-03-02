@@ -41,7 +41,7 @@ def diff_cross_section_Sauter_lowEnergy(θ, φ, params=()):
     return np.sin(θ)**2 * np.cos(φ)**2
 
 
-def ionizer_Sauter(TEmap, E_ionize, N_e, polar_opening_angle=0.1):
+def ionizer_Sauter(TEmap, E_ionize, N_e, polar_opening_angle=np.pi):
     """
     Generate randomly distributed photoelectrons
     """

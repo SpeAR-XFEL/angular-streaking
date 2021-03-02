@@ -13,6 +13,7 @@ if __name__ == "__main__":
     xfel_duration = 1e-15  # s
     xfel_energy = 930  # eV
     xfel_energy_std = 1  # eV
+    xfel_focal_spot = 2e-5  # m
 
     xfel_time_energy_means = (0, xfel_energy)
     xfel_time_energy_covariance = np.diag((xfel_duration, xfel_energy_std)) ** 2
@@ -21,6 +22,7 @@ if __name__ == "__main__":
         xfel_time_energy_means,
         xfel_time_energy_covariance,
         binding_energy,
+        xfel_focal_spot,
         number_of_electrons,
     )
 

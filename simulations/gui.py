@@ -22,6 +22,7 @@ matplotlib.rcParams['figure.dpi'] = 150
 if __name__ == '__main__':
     pe = None
     spe = None
+    kebins1 = kebins2 = 50
     dpi = 100
     fig = plt.figure(constrained_layout=False, figsize=(1920/dpi, 1080/dpi), dpi=dpi)
     gs = gridspec.GridSpec(2, 2, width_ratios=[1, 8], height_ratios=[1, 6], figure=fig)
@@ -54,24 +55,32 @@ if __name__ == '__main__':
     ax3 = fig.add_subplot(subgs1[2, 0])
     ax4 = fig.add_subplot(subgs2[2, 0])
     zerodata = np.zeros((1, 1))
-    im3 = ax3.imshow(zerodata, origin='lower', aspect='auto')
-    im4 = ax4.imshow(zerodata, origin='lower', aspect='auto')
+    im3 = matplotlib.image.NonUniformImage(ax3, origin='lower', extent=(0, 2*np.pi, 0, np.pi))
+    im4 = matplotlib.image.NonUniformImage(ax4, origin='lower', extent=(0, 2*np.pi, 0, np.pi))
+    ax3.images.append(im3)
+    ax4.images.append(im4)
     sp3 = ax3.axhspan(1, 1.5, alpha=0.25, color='C3')
     sp4 = ax4.axhspan(1, 1.5, alpha=0.25, color='C3')
 
-    for ax in (ax3,ax4):
+    for ax in (ax3, ax4):
         ax.set_xlabel(r'$\varphi$')
+        ax.set_ylabel(r'$\vartheta$')
         ax.set_xlim(0, 2 * np.pi)
+        ax.set_ylim(0, np.pi)
 
     # marginal distributions
     axmarg1x = fig.add_subplot(subgs1[1, 0], sharex=ax1)
     axmarg2x = fig.add_subplot(subgs2[1, 0], sharex=ax2, sharey=axmarg1x)
-    #axdiffx  = fig.add_subplot(subgs2[2, 0], sharex=ax2)
     axmarg1y = fig.add_subplot(subgs1[0, 1], sharey=ax1)
     axmarg2y = fig.add_subplot(subgs2[0, 1], sharey=ax2)
+    axmarg3y = fig.add_subplot(subgs1[2, 1], sharey=ax3)
+    axmarg4y = fig.add_subplot(subgs2[2, 1], sharey=ax4)
     st1, = axmarg1x.step([0,], [0,], where='post')
-    st2, = axmarg2x.step([0,], [0,], where='post', color='C0', alpha=1)
-    st3, = axmarg2x.step([0,], [0,], where='post', color='C1', alpha=1)
+    st2, = axmarg2x.step([0,], [0,], where='post', color='C0')
+    st3, = axmarg2x.step([0,], [0,], where='post', color='C1')
+    st7, = axmarg3y.plot((0,), (0,), drawstyle='steps-pre', color='C0')
+    st9, = axmarg4y.plot((0,), (0,), drawstyle='steps-pre', color='C0')
+    st8, = axmarg4y.plot((0,), (0,), drawstyle='steps-pre', color='C1')
     #fb1 = axmarg2x.fill_between(bins[0], margx, margx, step='pre', alpha=0.5, color='C1')
     #axdiffx.axhline(0, color='k', lw=1)
     #st4, = axdiffx.step(bins[0], margx, where='post', color='C1')
@@ -79,10 +88,8 @@ if __name__ == '__main__':
     #axdiffx.yaxis.set_major_locator(loc)
     st5, = axmarg1y.plot([1], [1], color='C0', drawstyle='steps-pre')
     st6, = axmarg2y.plot([1], [1], color='C0', drawstyle='steps-pre')
-    axmarg2x.tick_params(bottom=False, labelbottom=False, left=False, labelleft=False)
-    axmarg1x.tick_params(bottom=False, labelbottom=False, left=False, labelleft=False)
-    axmarg1y.tick_params(bottom=False, labelbottom=False, left=False, labelleft=False)
-    axmarg2y.tick_params(bottom=False, labelbottom=False, left=False, labelleft=False)
+    for ax in (axmarg2x, axmarg1x, axmarg1y, axmarg2y, axmarg3y, axmarg4y):
+        ax.tick_params(bottom=False, labelbottom=False, left=False, labelleft=False)
 
     def update_electrons(val):
         global pe, spe
@@ -153,17 +160,18 @@ if __name__ == '__main__':
             wavelength=sliders['streaking laser 1']['wavelen. / m'].val,
             duration=sliders['streaking laser 1']['width / s'].val,
             focal_size=(foc, foc))
-        foc2 = sliders['streaking laser 2']['focal spot / m'].val
 
-        if sliders['streaking laser 2']['energy / J'].val > 0:
+        h = sliders['streaking laser harmonics']['harmonic'].val
+        if h > 0:
+            foc2 = sliders['streaking laser harmonics']['focal spot / m'].val
             beam = beam + SimpleGaussianBeam(
-                energy=sliders['streaking laser 2']['energy / J'].val,
-                cep=sliders['streaking laser 2']['CEP'].val,
-                envelope_offset=sliders['streaking laser 2']['delay / s'].val,
-                wavelength=sliders['streaking laser 2']['wavelen. / m'].val,
-                duration=sliders['streaking laser 2']['width / s'].val,
-                focal_size=(foc, foc))
-        
+                energy=sliders['streaking laser harmonics']['energy / J'].val,
+                cep=sliders['streaking laser 1']['CEP'].val,
+                envelope_offset=sliders['streaking laser harmonics']['delay / s'].val,
+                wavelength=sliders['streaking laser 1']['wavelen. / m'].val/h,
+                duration=sliders['streaking laser 1']['width / s'].val,
+                focal_size=(foc2, foc2))
+
         spe = classical_lorentz_streaker(pe, beam, (0, sliders['simulation']['time / s'].val), sliders['simulation']['stepsize / s'].val)
         diff = time.perf_counter()-start
         per = diff/sliders['simulation']['electrons'].val
@@ -172,7 +180,7 @@ if __name__ == '__main__':
         return update_detector(None)
 
     def update_detector(val):
-        global fb1, sp3, sp4
+        global fb1, sp3, sp4, kebins1, kebins2
         r, theta, phi  = cartesian_to_spherical(*pe.p.T)
         sr, stheta, sphi = cartesian_to_spherical(*spe.p.T)
         rsr, _, _ = cartesian_to_spherical(*spe.r.T)
@@ -185,19 +193,19 @@ if __name__ == '__main__':
         sp3 = ax3.axhspan(center + acc, center - acc, alpha=0.2, color='C3')
         sp4 = ax4.axhspan(center + acc, center - acc, alpha=0.2, color='C3')
 
-        mask1 = np.abs((theta - center) % np.pi) < acc
-        mask2 = np.abs((stheta - center) % np.pi) < acc
+        mask1 = np.abs((theta - center)) < acc
+        mask2 = np.abs((stheta - center)) < acc
 
-        phibins = int(sliders['detector'][r'φ bins'].val)
-        thetabins = int(sliders['detector'][r'ϑ bins'].val)
-        kebins = (np.linspace(0, 2 * np.pi, phibins + 1), 50)
-        angbins = (kebins[0], np.linspace(0, np.pi, thetabins + 1))
+        phibincount = int(sliders['detector'][r'φ bins'].val)
+        thetabincount = int(sliders['detector'][r'ϑ bins'].val)
+        phibins = np.linspace(0, 2 * np.pi, phibincount + 1)
+        thetabins = np.arcsin(np.linspace(-1, 1, thetabincount + 1)) + np.pi/2
 
         data1, x1, y1 = np.histogram2d(
-            (phi[mask1] + np.pi / 2) % (2 * np.pi), pe.Ekin()[mask1] / const.e, bins=kebins
+            (phi[mask1] + np.pi / 2) % (2 * np.pi), pe.Ekin()[mask1] / const.e, bins=(phibins, kebins1)
         )
         data2, x2, y2 = np.histogram2d(
-            (sphi[mask2] + np.pi / 2) % (2 * np.pi), spe.Ekin()[mask2] / const.e, bins=kebins
+            (sphi[mask2] + np.pi / 2) % (2 * np.pi), spe.Ekin()[mask2] / const.e, bins=(phibins, kebins2)
         )
         im1.set_data(data1.T)
         im2.set_data(data2.T)
@@ -207,15 +215,16 @@ if __name__ == '__main__':
         im2.autoscale()
 
         data3, x3, y3 = np.histogram2d(
-            (phi + np.pi / 2) % (2 * np.pi), theta, bins=angbins
+            (phi + np.pi / 2) % (2 * np.pi), theta, bins=(phibins, thetabins)
         )
         data4, x4, y4 = np.histogram2d(
-            (sphi + np.pi / 2) % (2 * np.pi), stheta, bins=angbins
+            (sphi + np.pi / 2) % (2 * np.pi), stheta, bins=(phibins, thetabins)
         )
-        im3.set_data(data3.T)
-        im4.set_data(data4.T)
-        im3.set_extent((x3[0], x3[-1], y3[0], y3[-1]))
-        im4.set_extent((x4[0], x4[-1], y4[0], y4[-1]))
+
+        x3im, x4im = 0.5 * (x3[1:] + x3[:-1]), 0.5 * (x4[1:] + x4[:-1])
+        y3im, y4im = 0.5 * (y3[1:] + y3[:-1]), 0.5 * (y4[1:] + y4[:-1])
+        im3.set_data(x3im, y3im, data3.T)
+        im4.set_data(x4im, y4im, data4.T)
         im3.autoscale()
         im4.autoscale()
 
@@ -223,6 +232,8 @@ if __name__ == '__main__':
         marg2x = np.append(data2.T.sum(axis=0), 0)
         marg1y = np.append(data1.T.sum(axis=1), 0)
         marg2y = np.append(data2.T.sum(axis=1), 0)
+        marg3y = np.append(data3.sum(axis=0), 0)
+        marg4y = np.append(data4.sum(axis=0), 0)
         st1.set_data(x1, marg1x)
         st2.set_data(x1, marg1x)
         st3.set_data(x2, marg2x)
@@ -233,15 +244,18 @@ if __name__ == '__main__':
         #fb1 = axmarg2x.fill_between(x2, marg1x, marg2x, step='post', alpha=0.5, color='C1')
         st5.set_data(marg1y, y1)
         st6.set_data(marg2y, y2)
-        for i, ax in enumerate((axmarg1y, axmarg2y, axmarg1x, axmarg2x)):
+        st7.set_data(marg3y, y3)
+        st8.set_data(marg4y, y4)
+        st9.set_data(marg3y, y3)
+        for i, ax in enumerate((axmarg3y, axmarg4y, axmarg1y, axmarg2y, axmarg1x, axmarg2x)):
             ax.relim()
-            ax.autoscale_view(scaley=(i >= 2), scalex=(i < 2))
-        return im1, im2, st1, st2, st3, st5, st6
+            ax.autoscale_view(scaley=(i >= 4), scalex=(i < 4))
+        return im1, im2, st1, st2, st3, st5, st6, st7, st8, st9
     # Sliders galore!
     sliders_spec = {
         'XFEL': {
             'peaks':              (1,       10,    1,     1,      '%1d',   update_electrons),
-            'width (1pk) / s':    (1e-17,   1e-14, None,  1e-15,  None,    update_electrons),
+            'width (1pk) / s':    (1e-17,   1.5e-14, None,  1e-15,  None,    update_electrons),
             'µ(E) (1pk) / eV':    (800,     2000,  None,  1200,   '%.0f',  update_electrons),
             'σ(E) (1pk) / eV':    (0.1,     10,    None,  0.5,    '%.1f',  update_electrons),
             'chirp (1pk)':        (-0.999,  0.999, None,  0,      '%.1f',  update_electrons),
@@ -259,16 +273,15 @@ if __name__ == '__main__':
             'energy / J':         (0,       1e-3,  None,  30e-6,  None,    update_streaking),
             'CEP':                (0,       2*π,   None,  0,     '%1.2f',  update_streaking),
         },
-        'streaking laser 2': {
+        'streaking laser harmonics': {
+            'harmonic':           (0,       3,     1,     0,      '%1d',   update_streaking),
             'focal spot / m':     (100e-6,  2e-3,  None,  5e-4,   None,    update_streaking),
             'wavelen. / m':       (1e-7,    10e-6, None,  10e-6,  None,    update_streaking),
-            'width / s':          (1e-14,   1e-12, None,  3e-13,  None,    update_streaking),
             'delay / s':          (-1e-12,  1e-12, None,  0,      None,    update_streaking),
             'energy / J':         (0,       1e-3,  None,  0,      None,    update_streaking),
-            'CEP':                (0,       2*π,   None,  0,     '%1.2f',  update_streaking),
         },
         'simulation': {
-            'electrons':          (1e3,     5e5,   1,     2e5,    None,    update_electrons),
+            'electrons':          (1e3,     5e5,   1,     1e5,    None,    update_electrons),
             'time / s':           (0,       1e-11, None,  1e-12,  None,    update_streaking),
             'stepsize / s':       (5e-15,   2e-14, None,  1e-14,  None,    update_streaking),
         },
@@ -304,7 +317,7 @@ if __name__ == '__main__':
             sl.valtext.set_fontfamily('monospace')
             sliders[cat][key] = sl
 
-    frames = 400
+    frames = 600
     anirange = np.linspace(3.5e-16, 3.5e-15, frames)
     def animate(frame):#1e-17,     5e-15
         #sliders['streaking laser 1']['CEP'].set_val(frame / frames * 2 * np.pi)
@@ -322,7 +335,13 @@ if __name__ == '__main__':
     figManager.window.showMaximized()
     figManager.window.setFocus()
 
+    
+    # set some parameters for anim
+    #sliders['streaking laser 1']['focal spot / m'].set_val(1e-4)
+    #sliders['streaking laser 1']['energy / J'].set_val(5e-4)
+    #kebins2 = np.linspace(0, 200, 50)
+    #kebins1 = np.linspace(48, 52, 50)
     plt.show()
     #anim = animation.FuncAnimation(fig, animate,
     #                           frames=frames, blit=True)
-    #anim.save('build/anim_dur_n.mp4', fps=25, dpi=100)
+    #anim.save('build/anim_strongstreak_dur.mp4', fps=60, dpi=100)
