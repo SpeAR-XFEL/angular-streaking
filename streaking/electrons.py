@@ -4,21 +4,21 @@ import scipy.constants as const
 
 class ClassicalElectrons:
     """
-    Holds a set of electrons. Maybe this should become a `Particles` class at some point?
+    Holds a set of electrons. Maybe this should become a `ClassicalParticles` class at some point?
     """
 
     def __init__(self, r, p, Ekin=None, t0=None):
         """
         Parameters
         ----------
-        r : (N, 3) array_like
+        r : array_like, shape (N, 3)
             Position vectors in meter.
-        p : (N, 3) array_like
+        p : array_like, shape (N, 3)
             Momentum vectors in kilogram meter per second.
-        Ekin : (N) array_like, optional
+        Ekin : array_like, shape (N,), optional
             If given, p is taken as unit vector of momentum.
-        t0 : (N) array_like, optional
-            Optional birth times. If not given, every electron is born at t0 = 0.
+        t0 : array_like, shape (N,), optional
+            Electron birth times. If not given, every electron is born at t0 = 0.
         """
         self.r = np.asarray(r)
         p = np.asarray(p)
@@ -34,14 +34,45 @@ class ClassicalElectrons:
             self.t0 = t0
 
     def Ekin(self):
+        """
+        Calculates the kinetic energy in Joules for every electron.
+
+        Returns
+        -------
+        Ekin : ndarray, shape (N,)
+        """
         pmag = np.linalg.norm(self.p, axis=1)
         E0 = const.m_e * const.c ** 2
         return np.sqrt(E0 ** 2 + (pmag * const.c) ** 2) - E0
 
     def gamma(self):
+        """
+        Calculates the relativistic gamma factor for every electron.
+
+        Returns
+        -------
+        gamma : ndarray, shape (N,)
+        """
         return np.sqrt(
             1 + (np.linalg.norm(self.p, axis=0) / (const.m_e * const.c)) ** 2
         )
 
     def v(self):
+        """
+        Calculates the relativistic velocity for every electron.
+
+        Returns
+        -------
+        v : ndarray, shape (N,)
+        """
         return self.p / (const.m_e * self.gamma())
+
+    def __len__(self):
+        """
+        Returns the number of electrons in the object.
+
+        Returns
+        -------
+        len : int
+        """
+        return self.r.shape[0]

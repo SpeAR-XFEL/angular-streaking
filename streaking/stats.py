@@ -1,61 +1,39 @@
 import numpy as np
-import scipy
 
 
 def rejection_sampling(pdf, parameter_range, samples, params=()):
-    # Funny solution I guess...
-    # Worst case run-time is infinite, but that’s improbable.
+    """
+    Rejection sampling on the (optionally multivariate) probability density function `pdf`.
+    As a fixed number of samples is provided, the runtime drastically depends on  how evenly
+    the pdf is distributed. The PDF is expected to be normalized to its maximum.
 
-    # Find global maximum of target PDF to scale the uniform distribution.
-    M = -scipy.optimize.shgo(
-        lambda x: -pdf(x, *params), (parameter_range,), iters=8
-    ).fun
+    Parameters
+    ----------
+    pdf : function
+       Multivariate probability density function (N variables), normalized to the maximum
+    parameter_range : array_like, shape (N, 2) or (2,)
+       Parameter ranges for each dimension
+    samples : int
+       Number of samples
+    params : iterable
+       Additional parameters passed to `pdf`, optional
+
+    Returns
+    -------
+    rand : ndarray, shape (N, samples)
+       Drawn random samples
+    """
+    parameter_range = np.atleast_2d(parameter_range)
+    ndim = parameter_range.shape[0]
 
     rejected = np.full(samples, True)
-    rand = np.empty(samples)
+    rand = np.empty((samples, ndim))
     rejection = np.empty(samples)
     sum_rejected = samples
     while sum_rejected > 0:
-        rand[rejected] = np.random.uniform(*parameter_range, sum_rejected)
-        rejection[rejected] = M * np.random.rand(sum_rejected)
-        rejected[rejected] = rejection[rejected] > pdf(rand[rejected], *params)
-        sum_rejected = np.sum(rejected)
-    return rand
-
-
-def rejection_sampling_nD(pdf, parameter_range, samples, params=()):
-    """
-    draws (x1,...,xN) distributed according to pdf(x1,...,xN)
-    Runtime drastically depends on how even the pdf is distributed. 
-    
-    Parameters:
-    pdf : function
-       N-D probability density function, normalized to the maximum
-    parameter_range : (N,2) array_like
-       each row consists of the min and max values for the dimensions
-    samples : int
-       number of pairs to be drawn
-    params : 
-       whatever else you need for the pdf
-    
-    Return:
-    rand : (N,samples) array_like
-       each column is a set of (x1,...,xN) 
-    """
-    Ndim = len(parameter_range)
-
-    rejected = np.full(samples, True)
-    rand = np.empty((Ndim, samples))
-    rejection = np.empty(samples)
-    sum_rejected = samples
-    while sum_rejected > 0.1:
-        for i in range(Ndim):
-            rand[i, :][rejected] = np.random.uniform(*parameter_range[i], sum_rejected)
+        rand[rejected] = np.random.uniform(*parameter_range.T, (sum_rejected, ndim))
         rejection[rejected] = np.random.rand(sum_rejected)
-        rand_rejected = rand[:, rejected]
-#        print(*rand_rejected)
-#        print(params)
-        rejected[rejected] = rejection[rejected] > pdf(*rand_rejected, *params)
+        rejected[rejected] = rejection[rejected] > pdf(*rand[rejected].T, *params)
         sum_rejected = np.sum(rejected)
-        
-    return rand
+
+    return np.squeeze(rand.T)

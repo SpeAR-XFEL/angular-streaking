@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.constants as const
-import copy
+
 
 class SimpleGaussianBeam:
     """Calculates electric and magnetic field of a simple
@@ -11,6 +11,10 @@ class SimpleGaussianBeam:
     fields(self, x, y, z, t)
         Calculates the electric and magnetic fields of the gaussian beam
         at every given position and time.
+
+    __add__(self, other)
+        Allows you to add two beams, the resulting beam object will calculate
+        the fields for the superposition of both beam objects.
     """
 
     def __init__(
@@ -32,22 +36,22 @@ class SimpleGaussianBeam:
             Longitudinal coordinates of hor. and ver. focal point.
         focal_size : tuple of scalar
             Focal sizes (standard deviaton) in the transverse plane.
-        envelope_offset: scalar
+        envelope_offset : scalar
             Time offset of the envelope. An offset of zero means the
             envelope’s maximum is at the origin.
-        cep: scalar
+        cep : scalar
             Carrier-envelope phase. A phase of zero means the electric
             field’s maximum is at the maximum of the envelope.
-        wavelength: scalar
+        wavelength : scalar
             Beam wavelength.
-        M2: scalar
+        M2 : scalar
             Beam propagation ratio. One means ideal Gaussian beam.
-        energy: scalar
+        energy : scalar
             Pulse energy in Joules.
-        duration: scalar
+        duration : scalar
             FWHM pulse duration in seconds.
-        polarization: tuple of scalar
-            Normed Stokes vector (S1, S2, S3), defaults to right-hand circular polarization.
+        polarization : tuple of scalar
+            Normalized Stokes vector (S1, S2, S3), defaults to right-hand circular polarization.
         """
         assert len(focal_point) == 2
         assert len(focal_size) == 2
@@ -149,7 +153,20 @@ class SimpleGaussianBeam:
             B_field += B
         return E_field, B_field
 
-    def __add__(self, other):
-        newbeam = copy.copy(self)
-        newbeam.other_beams_list.append(other)
-        return newbeam
+    def __iadd__(self, other):
+        """
+        Allows you to add another beam to this one, from then on the fields method will
+        calculate the superposition of both. Cascading works.
+
+        Parameters
+        ----------
+        other : SimpleGaussianBeam
+            Other beam object for superposition
+
+        Returns
+        -------
+        newbeam : SimpleGaussianBeam
+            New beam object that provides the superposition of the passed beams.
+        """
+        self.other_beams_list.append(other)
+        return self
