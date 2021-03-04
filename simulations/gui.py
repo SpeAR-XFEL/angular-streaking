@@ -94,8 +94,8 @@ if __name__ == '__main__':
     def update_electrons(val):
         global pe, spe
         N_G = int(sliders['XFEL']['peaks'].val)
-        N_e = int(sliders['simulation']['electrons'].val)
-        E_ionize = sliders['target']['binding E / eV'].val  # eV
+        N_e = int(sliders['target']['photoelectrons'].val)
+        E_ionize = sliders['target']['PE binding E / eV'].val  # eV
         β = sliders['target']['β (1pk)'].val
 
         start = time.perf_counter()
@@ -139,7 +139,7 @@ if __name__ == '__main__':
             imextent = (*rangeIfs, *rangeE)
 
         diff = time.perf_counter() - start
-        per = diff/sliders['simulation']['electrons'].val
+        per = diff/len(pe)
         print(f'Generating electrons took {diff:.1f} s, {per*1e6:.1f} µs / e-. ', end='')
 
         teim.set_data(imdata)
@@ -164,7 +164,7 @@ if __name__ == '__main__':
         h = sliders['streaking laser harmonics']['harmonic'].val
         if h > 0:
             foc2 = sliders['streaking laser harmonics']['focal spot / m'].val
-            beam = beam + SimpleGaussianBeam(
+            beam += SimpleGaussianBeam(
                 energy=sliders['streaking laser harmonics']['energy / J'].val,
                 cep=sliders['streaking laser 1']['CEP'].val,
                 envelope_offset=sliders['streaking laser harmonics']['delay / s'].val,
@@ -174,7 +174,7 @@ if __name__ == '__main__':
 
         spe = classical_lorentz_streaker(pe, beam, (0, sliders['simulation']['time / s'].val), sliders['simulation']['stepsize / s'].val)
         diff = time.perf_counter()-start
-        per = diff/sliders['simulation']['electrons'].val
+        per = diff/len(spe)
         print(f'Streaking took {diff:.1f} s, {per*1e6:.1f} µs / e-')
 
         return update_detector(None)
@@ -255,15 +255,19 @@ if __name__ == '__main__':
     sliders_spec = {
         'XFEL': {
             'peaks':              (1,       10,    1,     1,      '%1d',   update_electrons),
-            'width (1pk) / s':    (1e-17,   1.5e-14, None,  1e-15,  None,    update_electrons),
+            'width (1pk) / s':    (1e-17,   15e-15,None,  1e-15,  None,    update_electrons),
             'µ(E) (1pk) / eV':    (800,     2000,  None,  1200,   '%.0f',  update_electrons),
             'σ(E) (1pk) / eV':    (0.1,     10,    None,  0.5,    '%.1f',  update_electrons),
             'chirp (1pk)':        (-0.999,  0.999, None,  0,      '%.1f',  update_electrons),
             'focal spot / m':     (1e-6,    1e-4,  None,  2e-5,   None,    update_electrons),
         },
         'target': {
-            'binding E / eV':     (500,     1500,  None,  1150,   '%.0f',  update_electrons),
+            'photoelectrons':     (1e3,     5e5,   1,     1e5,    '%1d',   update_electrons),
+            'PE binding E / eV':  (500,     1500,  None,  1150,   '%.0f',  update_electrons),
             'β (1pk)':            (0,       2,     2,     2,      '%1d',   update_electrons),
+            'Auger electrons':    (0,       5e5,   1,     0,      '%1d',   update_electrons),
+            'Auger lifetime / s': (1e-15,   1e-14, None,  22e-16, None,    update_electrons),
+            'Auger KE / eV':      (500,     1000,  None,  800,    '%.1f',  update_electrons),
         },
         'streaking laser 1': {
             'focal spot / m':     (100e-6,  2e-3,  None,  5e-4,   None,    update_streaking),
@@ -281,7 +285,6 @@ if __name__ == '__main__':
             'energy / J':         (0,       1e-3,  None,  0,      None,    update_streaking),
         },
         'simulation': {
-            'electrons':          (1e3,     5e5,   1,     1e5,    None,    update_electrons),
             'time / s':           (0,       1e-11, None,  1e-12,  None,    update_streaking),
             'stepsize / s':       (5e-15,   2e-14, None,  1e-14,  None,    update_streaking),
         },
@@ -295,7 +298,7 @@ if __name__ == '__main__':
     #        Name                  min      max    step   start   fmt       update function
     }
 
-    gs_widgets = gs[:, 0].subgridspec(33, 1)
+    gs_widgets = gs[:, 0].subgridspec(40, 1)
     idx = 0
     sliders = {}
     for cat in sliders_spec.keys():
