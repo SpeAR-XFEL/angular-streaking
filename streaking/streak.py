@@ -27,7 +27,7 @@ def _rk4(fun, t_span, y0, max_step, args=None):
 
 def _classical_lorentz_ode(t, y, m, q, beam, t0):
     r, p = y
-    E, B = beam.fields(*r.T, t + t0)
+    E = beam.field(*r.T, t + t0)
     # Can’t use ClassicalElectron methods here...
     pmag = np.linalg.norm(p, axis=0)
     E0 = m * const.c ** 2
@@ -35,7 +35,10 @@ def _classical_lorentz_ode(t, y, m, q, beam, t0):
     gamma = Etot / E0
     v = p / (gamma * m)
     drdt = v
-    dpdt = q * (E + np.cross(v, B))
+    # Triple cross product optimization (a × (b × c) = (a ∙ c) ∙ b - (a ∙ b) ∙ c)
+    var = - v[:, 2][:, None] * E
+    var[:, 2] += np.einsum('ij,ij->i', v, E)
+    dpdt = q * (E + (var / const.c))
     return (drdt, dpdt)
 
 
@@ -73,6 +76,7 @@ def classical_lorentz_streaker(
     splitt = np.array_split(electrons.t0, processes)
     with Pool(processes) as p:
         res = p.map(func, [z for z in zip(splitr, splitp, splitt)])
+    #res = [func(z) for z in zip(splitr, splitp, splitt)]
     result = np.concatenate(res, axis=1)
     return ClassicalElectrons(*result, t0=electrons.t0)
 
@@ -82,7 +86,8 @@ def classical_lorentz_streaker(
 
 
 def _interaction_step(electrons, beam, t, t_step):
-    E, B = beam.fields(*electrons.r.T, t)
+    E = beam.field(*electrons.r.T, t)
+    B = np.cross([0, 0, 1], E) / const.c
     F = -const.e * (E + np.cross(electrons.p, B) / const.m_e / electrons.gamma())
     electrons.p = electrons.p + F * t_step
     electrons.r = electrons.r + electrons.v() * t_step

@@ -84,8 +84,8 @@ class SimpleGaussianBeam:
         self.polarization = polarization
         self.other_beams_list = []
 
-    def fields(self, x, y, z, t):
-        """Calculates the electric and magnetic fields of the gaussian beam
+    def field(self, x, y, z, t):
+        """Calculates the electric field of the gaussian beam
         at every given position and time.
 
         Parameters
@@ -103,8 +103,6 @@ class SimpleGaussianBeam:
         -------
         E : (..., 3) array_like
             Electric field vectors.
-        B : (..., 3) array_like
-            Magnetic field vectors.
         """
         x = np.asarray(x)
         y = np.asarray(y)
@@ -145,13 +143,11 @@ class SimpleGaussianBeam:
         )
 
         E_field = (central_E_field * offaxis_pulsed_factor * polarization_vec).T
-        B_field = np.cross([0, 0, 1], E_field) / const.c
 
         for otherbeam in self.other_beams_list:
             E, B = otherbeam.fields(x, y, z, t)
             E_field += E
-            B_field += B
-        return E_field, B_field
+        return E_field
 
     def __iadd__(self, other):
         """
