@@ -24,9 +24,8 @@ def ionizer_simple(β, tEmean, tEcov, EB, xfel_spotsize, electrons):
         )
         px, py, pz = spherical_to_cartesian(1, ϑ, φ)
     else:
-        px, py, pz = np.random.normal(
-            size=(3, electrons)
-        )  # ClassicalElectrons normalizes this
+        # ClassicalElectrons normalizes this
+        px, py, pz = np.random.normal(size=(3, electrons))
 
     r = np.random.multivariate_normal(
         (0, 0, 0), np.diag((xfel_spotsize, xfel_spotsize, 1e-15)) ** 2, electrons
@@ -53,34 +52,23 @@ def diff_cross_section_Sauter(θ, φ, ɣ):
     return factor1 * factor2 * factor3
 
 
-def diff_cross_section_Sauter_lowEnergy(θ, φ, params=()):
+def diff_cross_section_Sauter_lowEnergy(angles):
+    θ, φ = angles[:, 0], angles[:, 1]
     return np.sin(θ) ** 2 * np.cos(φ) ** 2
 
 
-def ionizer_Sauter(TEmap, E_ionize, N_e, polar_opening_angle=np.pi):
+def ionizer_Sauter(TEmap, E_ionize, N_e):
     """
     Generate randomly distributed photoelectrons
     """
 
     # generate electron birthtimes and kinetic energy from TEmap
-    birthtimes, E_photon = rejection_sampling(
-        TEmap.pdf,
-        [[TEmap.t0, TEmap.t1], [TEmap.E0, TEmap.E1]],
-        N_e,
-        (),
-    )
+    birthtimes, E_photon = rejection_sampling(TEmap.eval, TEmap.domain, N_e)
     Ekin = (E_photon - E_ionize) * const.e  # in eV
     # mean_gamma = np.mean(1 + Ekin / (const.m_e * const.c**2))
     # generate emission angles from Sauter cross section
     theta, phi = rejection_sampling(
-        diff_cross_section_Sauter_lowEnergy,
-        np.array(
-            [
-                [np.pi / 2 - polar_opening_angle, np.pi / 2 + polar_opening_angle],
-                [-np.pi, np.pi],
-            ]
-        ),
-        N_e,
+        diff_cross_section_Sauter_lowEnergy, ((-π, π), (0, π)), N_e
     )
     px, py, pz = spherical_to_cartesian(1, theta, phi)
     r = np.zeros((N_e, 3)) + 1e-24

@@ -3,6 +3,8 @@ from streaking.time_energy_map import Time_Energy_Map
 from streaking.ionization import ionizer_simple, ionizer_Sauter
 from streaking.conversions import cartesian_to_spherical
 from streaking.streak import classical_lorentz_streaker
+from streaking.multivariate_map_interpolator import MultivariateMapInterpolator
+from streaking.stats import covariance_from_correlation_2d
 import numpy as np
 import scipy.stats
 import scipy.constants as const
@@ -107,43 +109,31 @@ if __name__ == '__main__':
             sigma_E = np.abs(np.random.normal(2, 0.5, N_G))
             corr_list = np.random.normal(0, 0, N_G)
             I_list = np.abs(np.random.normal(10, 0.1, N_G))
-            stepsizes = (1e-16, 0.1)
 
-            TEmap = Time_Energy_Map(
-                mu_list=np.stack((mu_t, mu_E)),
-                sigma_list=np.stack((sigma_t, sigma_E)),
-                corr_list=corr_list,
-                I_list=I_list,
-                stepsizes=stepsizes,
-            )
+            covs = covariance_from_correlation_2d(np.stack((sigma_t, sigma_E)), corr_list).T
+            TEmap = MultivariateMapInterpolator.from_gauss_blob_list(np.stack((mu_t, mu_E)).T, covs, I_list)
 
             pe = ionizer_Sauter(TEmap, E_ionize, N_e)
-            imdata = TEmap.time_energy_map
-            imextent = (TEmap.time_list[0] * 1e15, TEmap.time_list[-1] * 1e15, TEmap.Ekin_list[0], TEmap.Ekin_list[-1])
+            imdata = TEmap.map.T
+            imextent = TEmap.domain.flatten()
         elif N_G == 2:
             twopk_dist = sliders['XFEL']['distance (2pk) / s'].val
             dur = sliders['XFEL']['width (1pk) / s'].val
             sigE = sliders['XFEL']['σ(E) (1pk) / eV'].val
             muE = sliders['XFEL']['µ(E) (1pk) / eV'].val
-            mu_t = (-twopk_dist/2, twopk_dist/2)
+            mu_t = (-twopk_dist / 2, twopk_dist / 2)
             mu_E = (muE, muE)  # eV
             sigma_t = (dur, dur)
             sigma_E = (sigE, sigE)
             corr_list = (0, 0)
             I_list = (0.5, 0.5)
-            stepsizes = (1e-17, 0.1)
 
-            TEmap = Time_Energy_Map(
-                mu_list=np.stack((mu_t, mu_E)),
-                sigma_list=np.stack((sigma_t, sigma_E)),
-                corr_list=corr_list,
-                I_list=I_list,
-                stepsizes=stepsizes,
-            )
+            covs = covariance_from_correlation_2d(np.stack((sigma_t, sigma_E)), corr_list).T
+            TEmap = MultivariateMapInterpolator.from_gauss_blob_list(np.stack((mu_t, mu_E)).T, covs, I_list)
 
             pe = ionizer_Sauter(TEmap, E_ionize, N_e)
-            imdata = TEmap.time_energy_map
-            imextent = (TEmap.time_list[0] * 1e15, TEmap.time_list[-1] * 1e15, TEmap.Ekin_list[0], TEmap.Ekin_list[-1])
+            imdata = TEmap.map.T
+            imextent = TEmap.domain.flatten()
         else:
             dur = sliders['XFEL']['width (1pk) / s'].val
             sigE = sliders['XFEL']['σ(E) (1pk) / eV'].val
@@ -278,7 +268,7 @@ if __name__ == '__main__':
     # Sliders galore!
     sliders_spec = {
         'XFEL': {
-            'peaks':              (1,       10,    1,     1,      '%1d',   update_electrons),
+            'peaks':              (1,       10,    1,     2,      '%1d',   update_electrons),
             'width (1pk) / s':    (1e-17,   15e-15,None,  1e-15,  None,    update_electrons),
             'µ(E) (1pk) / eV':    (800,     2000,  None,  1200,   '%.0f',  update_electrons),
             'σ(E) (1pk) / eV':    (0.1,     10,    None,  0.5,    '%.1f',  update_electrons),

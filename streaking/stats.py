@@ -1,6 +1,15 @@
 import numpy as np
 
 
+def covariance_from_correlation_2d(stds, cor):
+    return np.array(
+        (
+            (stds[0] ** 2, cor * stds[0] * stds[1]),
+            (cor * stds[0] * stds[1], stds[1] ** 2),
+        )
+    )
+
+
 def rejection_sampling(pdf, parameter_range, samples, params=()):
     """
     Rejection sampling on the (optionally multivariate) probability density function `pdf`.
@@ -33,7 +42,7 @@ def rejection_sampling(pdf, parameter_range, samples, params=()):
     while sum_rejected > 0:
         rand[rejected] = np.random.uniform(*parameter_range.T, (sum_rejected, ndim))
         rejection[rejected] = np.random.rand(sum_rejected)
-        rejected[rejected] = rejection[rejected] > pdf(*rand[rejected].T, *params)
+        rejected[rejected] = rejection[rejected] > pdf(rand[rejected], *params)
         sum_rejected = np.sum(rejected)
 
     return np.squeeze(rand.T)

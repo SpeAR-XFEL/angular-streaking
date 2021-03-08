@@ -1,13 +1,13 @@
 import numpy as np
-import scipy.constants as const
 import matplotlib.pyplot as plt
 from scipy.ndimage.filters import gaussian_filter
 import scipy.interpolate as si
 
+
 class Time_Energy_Map:
     """
    generates a 2D map of intensity vs photon energy and time
-   inputs are either 
+   inputs are either
       - a already existing .png (for comical purposes)
       - a set of 2D Gaussian peaks given via mu, sigma, corr, I
    """
@@ -28,9 +28,9 @@ class Time_Energy_Map:
         ----------
         image_path : string, optional
             directory of a greyscale .png, describing energy vs time of the x-ray pulse
-        Ekin_range : tuple of scalar, optional (required if image_path is given) 
-            minimum and maximum values of the kinetic energy range given in the .png in eV 
-        time_range : tuple of scalar, optional (required if image_path is given) 
+        Ekin_range : tuple of scalar, optional (required if image_path is given)
+            minimum and maximum values of the kinetic energy range given in the .png in eV
+        time_range : tuple of scalar, optional (required if image_path is given)
             minimum and maximum values of the time range given in the .png in s
         mu_list : (N,2) array_like
             center of gaussian peaks, in (s,eV)
@@ -59,7 +59,7 @@ class Time_Energy_Map:
             mu_list = np.array(mu_list)
             sigma_list = np.array(sigma_list)
             corr_list = np.array(corr_list)
-            
+
             # the map should include at least a distance of 4 sigma to each Gaussian peak
             time_min = np.min(mu_list[0, :] - 4 * sigma_list[0, :])
             time_max = np.max(mu_list[0, :] + 4 * sigma_list[0, :])
@@ -86,8 +86,7 @@ class Time_Energy_Map:
                 mu2 = mu_list[1, i]
                 sigma2 = sigma_list[1, i]
                 corr = corr_list[i]
-                I = I_list[i]
-                time_energy_map = time_energy_map + I / (
+                time_energy_map = time_energy_map + I_list[i] / (
                     2 * np.pi * sigma1 * sigma2 * np.sqrt(1 - corr ** 2)
                 ) * np.exp(
                     -1
@@ -99,16 +98,16 @@ class Time_Energy_Map:
                     )
                 )
             time_energy_map = time_energy_map / np.max(time_energy_map)
-        self.time_energy_map=time_energy_map    
+        self.time_energy_map = time_energy_map
         self.t0 = self.time_list[0]
         self.t1 = self.time_list[-1]
         self.E0 = self.Ekin_list[0]
         self.E1 = self.Ekin_list[-1]
         self.projection_time = np.sum(self.time_energy_map, axis=0)
         self.projection_Ekin = np.sum(self.time_energy_map, axis=1)
-            
-    def pdf(self, t, Ekin):
-        spline = si.RectBivariateSpline(
-        self.time_list, self.Ekin_list, self.time_energy_map.T
+        self.spline = si.RectBivariateSpline(
+            self.time_list, self.Ekin_list, self.time_energy_map.T
         )
-        return spline.ev(t,Ekin)
+
+    def pdf(self, t, Ekin):
+        return self.spline.ev(t, Ekin)

@@ -72,9 +72,8 @@ def streaking_sim(xfel_duration, cep, phibins, peaks):
 def make_image_cep(cep):
     phibins = np.linspace(0, 2 * np.pi, 64 + 1)
     durations = np.linspace(0e-15, 10e-15, 40)
-    ceps = np.linspace(0, 2 * np.pi, 40)
     hist = [streaking_sim(duration, cep, phibins, 2) for duration in tqdm(durations)]
-    plt.imshow(hist, origin='lower', aspect='auto', extent=(phibins[0], phibins[-1], 1e15*durations[0], 1e15*durations[-1]))
+    plt.imshow(hist, origin='lower', aspect='auto', extent=(phibins[0], phibins[-1], 1e15 * durations[0], 1e15 * durations[-1]))
     plt.title(f'Angular distribution of streaked electrons (energy integrated)\n at 1mJ & 100µm focus, CEP = {cep:.2f}, double pulses (1fs each)')
     plt.xlabel(r'$\varphi$')
     plt.ylabel(r'XFEL double pulse separation / fs')
@@ -85,16 +84,17 @@ def make_image_cep(cep):
 
 def make_image_dur(dur):
     phibins = np.linspace(0, 2 * np.pi, 64 + 1)
-    ceps = np.linspace(0, 2 * np.pi, 10)
+    ceps = np.linspace(0, 2 * np.pi, 40)
     hist = [streaking_sim(dur, cep, phibins, 2) for cep in tqdm(ceps)]
     plt.imshow(hist, origin='lower', aspect='auto', extent=(phibins[0], phibins[-1], ceps[0], ceps[-1]))
     plt.title(f'Angular distribution of streaked electrons (energy integrated)\n at 1mJ & 100µm focus, double pulses (1fs each), separation {1e15*dur:.2f} fs')
     plt.xlabel(r'$\varphi$')
     plt.ylabel(r'CEP')
     plt.tight_layout(pad=0.5)
-    #plt.savefig(f'simulations/build/no_ke_dur_2pk/{dur*1e15:.2f}.png', dpi=400)
+    plt.savefig(f'simulations/build/no_ke_dur_2pk/{dur*1e15:.2f}.png', dpi=400)
     plt.close()
 
+
 if __name__ == "__main__":
-    #[make_image_cep(cep) for cep in tqdm(np.linspace(0, 2 * np.pi, 20))]
-    [make_image_dur(dur) for dur in tqdm(np.linspace(0e-15, 10e-15, 1))]
+    [make_image_cep(cep) for cep in tqdm(np.linspace(0, 2 * np.pi, 20))]
+    [make_image_dur(dur) for dur in tqdm(np.linspace(10e-15, 20e-15, 20))]
