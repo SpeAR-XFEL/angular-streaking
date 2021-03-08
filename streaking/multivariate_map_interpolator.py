@@ -58,11 +58,9 @@ class MultivariateMapInterpolator:
                 self.map /= self.map.max()
 
     def add_gauss_blob(self, means, cov, scale=1):
-        # We need to apply some tricks for the covariace inverse to improve numerical condition
-        Dinv = np.diag(1 / np.sqrt(np.diagonal(cov)))
-        Pinv = np.linalg.inv(Dinv @ cov @ Dinv)
-        Σinv = Dinv @ Pinv @ Dinv
-        self.map += scale * np.exp(-0.5 * np.einsum('...i,ij,...j', means - self.grid, Σinv, means - self.grid))
+        Σinv = np.linalg.inv(cov)
+        xmu = means - self.grid
+        self.map += scale * np.exp(-0.5 * np.einsum('...i,ij,...j', xmu, Σinv, xmu))
 
     def add_arbitrary(self, map_):
         self.map += map_
