@@ -25,6 +25,7 @@ class ClassicalElectrons:
         if Ekin is None:
             self.p = p
         else:
+            Ekin = np.atleast_1d(Ekin)
             pmag = np.sqrt(2 * const.m_e * const.c ** 2 * Ekin + Ekin ** 2) / const.c
             self.p = pmag[:, None] * (p / np.linalg.norm(p, axis=1)[:, None])
 
@@ -76,3 +77,9 @@ class ClassicalElectrons:
         len : int
         """
         return self.r.shape[0]
+
+    def __iadd__(self, other):
+        self.r = np.concatenate((self.r, other.r))
+        self.p = np.concatenate((self.p, other.p))
+        self.t0 = np.concatenate((self.t0, other.t0))
+        return self

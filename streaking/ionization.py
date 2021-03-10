@@ -73,3 +73,16 @@ def ionizer_Sauter(TEmap, E_ionize, N_e):
     px, py, pz = spherical_to_cartesian(1, theta, phi)
     r = np.zeros((N_e, 3)) + 1e-24
     return ClassicalElectrons(r, np.stack((px, py, pz)).T, Ekin, birthtimes)
+
+
+def naive_auger_generator(photoelectrons, ratio, lifetime, energy):
+    N = int(len(photoelectrons) * ratio)
+    choice = np.random.choice(len(photoelectrons), N)
+    r = photoelectrons.r[choice]
+    t0 = photoelectrons.t0[choice] + np.random.exponential(lifetime, N)
+    p = np.random.normal(size=(N, 3))
+    linewidth = const.hbar / lifetime
+    Ekin = energy + np.random.standard_cauchy(N) * linewidth
+    # Cut off energies below zero.
+    mask = Ekin > 0
+    return ClassicalElectrons(r[mask], p[mask], Ekin[mask], t0[mask])

@@ -1,6 +1,5 @@
 from streaking.gaussian_beam import SimpleGaussianBeam
-from streaking.time_energy_map import Time_Energy_Map
-from streaking.ionization import ionizer_simple, ionizer_Sauter
+from streaking.ionization import ionizer_simple, ionizer_Sauter, naive_auger_generator
 from streaking.conversions import cartesian_to_spherical
 from streaking.streak import classical_lorentz_streaker
 from streaking.multivariate_map_interpolator import MultivariateMapInterpolator
@@ -8,10 +7,8 @@ from streaking.stats import covariance_from_correlation_2d
 import numpy as np
 import scipy.stats
 import scipy.constants as const
-from matplotlib.widgets import Slider, RadioButtons
-from matplotlib import animation
+from matplotlib.widgets import Slider
 import matplotlib.gridspec as gridspec
-import matplotlib.ticker as ticker
 import matplotlib.pyplot as plt
 import matplotlib
 import time
@@ -24,16 +21,26 @@ matplotlib.rcParams['figure.dpi'] = 150
 if __name__ == '__main__':
     pe = None
     spe = None
-    kebins1 = kebins2 = 50
+    # Fraction of cut-off values in otherwise unbounded histograms 
+    discard = 0.01
     dpi = 100
     fig = plt.figure(constrained_layout=False, figsize=(1920/dpi, 1080/dpi), dpi=dpi)
     gs = gridspec.GridSpec(2, 2, width_ratios=[1, 8], height_ratios=[1, 6], figure=fig)
 
     # time-energy map
-    ax0 = fig.add_subplot(gs[0, 1:])
+    gshdr = gs[0, 1].subgridspec(1, 2, wspace=0.1)
+    ax0 = fig.add_subplot(gshdr[0, 0])
     ax0.set_xlabel('$t$ / fs')
     ax0.set_ylabel(r'$h\nu$ / eV')
     teim = ax0.imshow([[1], [1]], origin='lower', aspect='auto')
+    ax0.set_title('Photon distribution')
+
+    # kinetic energy histogram
+    axke = fig.add_subplot(gshdr[0, 1])
+    axke.set_xlabel('$t$ / fs')
+    axke.set_ylabel(r'$e^-$ KE / eV')
+    keim = axke.imshow([[1], [1]], origin='lower', aspect='auto')
+    axke.set_title('Photoelectron distribution')
 
     subgs12 = gs[1, 1].subgridspec(1, 2, wspace=0.1)
     subgs1 = subgs12[0, 0].subgridspec(3, 2, hspace=0, wspace=0, height_ratios=(5, 2, 5), width_ratios=(4,1))
@@ -57,8 +64,8 @@ if __name__ == '__main__':
     ax3 = fig.add_subplot(subgs1[2, 0])
     ax4 = fig.add_subplot(subgs2[2, 0])
     zerodata = np.zeros((1, 1))
-    im3 = matplotlib.image.NonUniformImage(ax3, origin='lower', extent=(0, 2*np.pi, 0, np.pi))
-    im4 = matplotlib.image.NonUniformImage(ax4, origin='lower', extent=(0, 2*np.pi, 0, np.pi))
+    im3 = matplotlib.image.NonUniformImage(ax3, origin='lower', extent=(0, 2 * π, 0, π))
+    im4 = matplotlib.image.NonUniformImage(ax4, origin='lower', extent=(0, 2 * π, 0, π))
     ax3.images.append(im3)
     ax4.images.append(im4)
     sp3 = ax3.axhspan(1, 1.5, alpha=0.25, color='C3')
@@ -83,11 +90,6 @@ if __name__ == '__main__':
     st7, = axmarg3y.plot((0,), (0,), drawstyle='steps-pre', color='C0')
     st9, = axmarg4y.plot((0,), (0,), drawstyle='steps-pre', color='C0')
     st8, = axmarg4y.plot((0,), (0,), drawstyle='steps-pre', color='C1')
-    #fb1 = axmarg2x.fill_between(bins[0], margx, margx, step='pre', alpha=0.5, color='C1')
-    #axdiffx.axhline(0, color='k', lw=1)
-    #st4, = axdiffx.step(bins[0], margx, where='post', color='C1')
-    #loc = ticker.FixedLocator((0,))
-    #axdiffx.yaxis.set_major_locator(loc)
     st5, = axmarg1y.plot([1], [1], color='C0', drawstyle='steps-pre')
     st6, = axmarg2y.plot([1], [1], color='C0', drawstyle='steps-pre')
     for ax in (axmarg2x, axmarg1x, axmarg1y, axmarg2y, axmarg3y, axmarg4y):
@@ -134,6 +136,7 @@ if __name__ == '__main__':
             pe = ionizer_Sauter(TEmap, E_ionize, N_e)
             imdata = TEmap.map.T
             imextent = TEmap.domain.flatten()
+            imextent[[0, 1]] *= 1e15
         else:
             dur = sliders['XFEL']['width (1pk) / s'].val
             sigE = sliders['XFEL']['σ(E) (1pk) / eV'].val
@@ -152,6 +155,14 @@ if __name__ == '__main__':
             imdata = scipy.stats.multivariate_normal(tEmeans, tEcovfs).pdf(np.dstack((A, B)))
             imextent = (*rangeIfs, *rangeE)
 
+        auger_ratio = sliders['target']['Auger ratio'].val
+        if auger_ratio > 0:
+            pe += naive_auger_generator(
+                pe, auger_ratio, 
+                sliders['target']['Auger lifetime / s'].val, 
+                sliders['target']['Auger KE / eV'].val * const.e
+            )
+
         diff = time.perf_counter() - start
         per = diff/len(pe)
         print(f'Generating electrons took {diff:.1f} s, {per*1e6:.1f} µs / e-. ', end='')
@@ -159,6 +170,13 @@ if __name__ == '__main__':
         teim.set_data(imdata)
         teim.set_extent(imextent)
         teim.autoscale()
+
+        kebins = np.linspace(*np.quantile(pe.Ekin(), (discard / 2, 1 - discard / 2)), 100)
+        tbins  = np.linspace(*np.quantile(pe.t0,     (discard / 2, 1 - discard / 2)), 100)
+        ke, kex, key = np.histogram2d(pe.t0, pe.Ekin(), bins=(tbins, kebins))
+        keim.set_data(ke.T)
+        keim.set_extent((*kex[[0, -1]] * 1e15, *key[[0, -1]] / const.e))
+        keim.autoscale()
 
         return update_streaking(None)
 
@@ -194,7 +212,7 @@ if __name__ == '__main__':
         return update_detector(None)
 
     def update_detector(val):
-        global fb1, sp3, sp4, kebins1, kebins2
+        global fb1, sp3, sp4
         r, theta, phi  = cartesian_to_spherical(*pe.p.T)
         sr, stheta, sphi = cartesian_to_spherical(*spe.p.T)
         rsr, _, _ = cartesian_to_spherical(*spe.r.T)
@@ -215,11 +233,16 @@ if __name__ == '__main__':
         phibins = np.linspace(0, 2 * np.pi, phibincount + 1)
         thetabins = np.arcsin(np.linspace(-1, 1, thetabincount + 1)) + np.pi/2
 
+        ke1 = pe.Ekin()[mask1] / const.e
+        ke2 = spe.Ekin()[mask2] / const.e
+        kebins1 = np.linspace(*np.quantile(ke1, (discard / 2, 1 - discard / 2)), 100)
+        kebins2 = np.linspace(*np.quantile(ke2, (discard / 2, 1 - discard / 2)), 100)
+
         data1, x1, y1 = np.histogram2d(
-            (phi[mask1] + np.pi / 2) % (2 * np.pi), pe.Ekin()[mask1] / const.e, bins=(phibins, kebins1)
+            (phi[mask1] + np.pi / 2) % (2 * np.pi), ke1, bins=(phibins, kebins1)
         )
         data2, x2, y2 = np.histogram2d(
-            (sphi[mask2] + np.pi / 2) % (2 * np.pi), spe.Ekin()[mask2] / const.e, bins=(phibins, kebins2)
+            (sphi[mask2] + np.pi / 2) % (2 * np.pi), ke2, bins=(phibins, kebins2)
         )
         im1.set_data(data1.T)
         im2.set_data(data2.T)
@@ -280,9 +303,9 @@ if __name__ == '__main__':
             'photoelectrons':     (1e3,     5e5,   1,     1e5,    '%1d',   update_electrons),
             'PE binding E / eV':  (500,     1500,  None,  1150,   '%.0f',  update_electrons),
             'β (1pk)':            (0,       2,     2,     2,      '%1d',   update_electrons),
-            'Auger electrons':    (0,       5e5,   1,     0,      '%1d',   update_electrons),
+            'Auger ratio':        (0,       1,     None,  0,      None,    update_electrons),
             'Auger lifetime / s': (1e-15,   1e-14, None,  22e-16, None,    update_electrons),
-            'Auger KE / eV':      (500,     1000,  None,  800,    '%.1f',  update_electrons),
+            'Auger KE / eV':      (50,      1000,  None,  60,    '%.1f',   update_electrons),
         },
         'streaking laser 1': {
             'focal spot / m':     (100e-6,  2e-3,  None,  5e-4,   None,    update_streaking),
