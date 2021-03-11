@@ -19,18 +19,18 @@ def rejection_sampling(pdf, parameter_range, samples, params=()):
     Parameters
     ----------
     pdf : function
-       Multivariate probability density function (N variables), normalized to the maximum
+        Multivariate probability density function (N variables), normalized to the maximum
     parameter_range : array_like, shape (N, 2) or (2,)
-       Parameter ranges for each dimension
+        Parameter ranges for each dimension
     samples : int
-       Number of samples
+        Number of samples
     params : iterable
-       Additional parameters passed to `pdf`, optional
+        Additional parameters passed to `pdf`, optional
 
     Returns
     -------
     rand : ndarray, shape (N, samples)
-       Drawn random samples
+        Drawn random samples
     """
     parameter_range = np.atleast_2d(parameter_range)
     ndim = parameter_range.shape[0]
