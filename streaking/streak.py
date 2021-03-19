@@ -7,6 +7,11 @@ from functools import partial
 import os
 
 
+def dumb_streaker(electrons, beam):
+    A = beam.vector_potential(*electrons.r.T, electrons.t0)
+    return ClassicalElectrons(electrons.r, electrons.p + const.e * A)
+
+
 def _rk4(fun, t_span, y0, max_step, args=None):
     h = max_step
     y = y0

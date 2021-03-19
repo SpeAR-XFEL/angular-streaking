@@ -22,6 +22,9 @@ class ClassicalElectrons:
         """
         self.r = np.asarray(r)
         p = np.asarray(p)
+
+        if self.r.shape != p.shape:
+            raise ValueError("r and p need to have the same shape")
         if Ekin is None:
             self.p = p
         else:

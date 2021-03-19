@@ -104,6 +104,38 @@ class SimpleGaussianBeam:
         E : (..., 3) array_like
             Electric field vectors.
         """
+        E0, phase = self._E0_and_phase(x, y, z, t)
+
+        # TODO: Implement Stokes vector.
+        polarization_vec = np.vstack(
+            (np.cos(-phase), np.sin(-phase), np.zeros_like(phase))
+        )
+
+        E_field = (E0 * polarization_vec).T
+
+        for otherbeam in self.other_beams_list:
+            E = otherbeam.field(x, y, z, t)
+            E_field += E
+        return E_field
+
+    def vector_potential(self, x, y, z, t):
+        E0, phase = self._E0_and_phase(x, y, z, t)
+
+        phase -= np.pi / 2
+
+        # TODO: Implement Stokes vector.
+        polarization_vec = np.vstack(
+            (np.cos(-phase), np.sin(-phase), np.zeros_like(phase))
+        )
+
+        A = (- E0 * polarization_vec / self.omega).T
+
+        #for otherbeam in self.other_beams_list:
+        #    E = otherbeam.field(x, y, z, t)
+        #    E_field += E
+        return A
+
+    def _E0_and_phase(self, x, y, z, t):
         x = np.asarray(x)
         y = np.asarray(y)
         z = np.asarray(z)
@@ -137,17 +169,8 @@ class SimpleGaussianBeam:
             - 0.5 * np.arctan(Zdif_y / self.zRy)
             + self.cep
         )
-        # TODO: Implement Stokes vector.
-        polarization_vec = np.vstack(
-            (np.cos(phase), np.sin(phase), np.zeros_like(phase))
-        )
 
-        E_field = (central_E_field * offaxis_pulsed_factor * polarization_vec).T
-
-        for otherbeam in self.other_beams_list:
-            E, B = otherbeam.fields(x, y, z, t)
-            E_field += E
-        return E_field
+        return central_E_field * offaxis_pulsed_factor, phase
 
     def __iadd__(self, other):
         """
