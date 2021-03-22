@@ -7,9 +7,15 @@ from functools import partial
 import os
 
 
-def dumb_streaker(electrons, beam):
-    A = beam.vector_potential(*electrons.r.T, electrons.t0)
-    return ClassicalElectrons(electrons.r, electrons.p + const.e * A)
+def dumb_streaker(electrons, beam, dumb=True, return_A_kick=False):
+    if dumb:
+        A = beam.vector_potential(*electrons.r.T, electrons.t0)
+    else:
+        A = beam.vector_potential_Arne(*electrons.r.T, electrons.t0)
+    if return_A_kick:
+        return ClassicalElectrons(electrons.r, electrons.p + const.e * A), np.linalg.norm(A, axis=1).max() * const.e
+    else:
+        return ClassicalElectrons(electrons.r, electrons.p + const.e * A)
 
 
 def _rk4(fun, t_span, y0, max_step, args=None):

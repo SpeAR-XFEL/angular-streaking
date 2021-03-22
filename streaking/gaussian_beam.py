@@ -107,7 +107,7 @@ class SimpleGaussianBeam:
         E0, phase = self._E0_and_phase(x, y, z, t)
 
         # TODO: Implement Stokes vector.
-        polarization_vec = np.vstack(
+        polarization_vec = np.array(
             (np.cos(-phase), np.sin(-phase), np.zeros_like(phase))
         )
 
@@ -130,9 +130,15 @@ class SimpleGaussianBeam:
 
         A = (- E0 * polarization_vec / self.omega).T
 
-        #for otherbeam in self.other_beams_list:
-        #    E = otherbeam.field(x, y, z, t)
-        #    E_field += E
+        for otherbeam in self.other_beams_list:
+            A += otherbeam.vector_potential(x, y, z, t)
+        return A
+
+    def vector_potential_Arne(self, x, y, z, t):
+        dt = 1e-15
+        ranges = t + np.arange(0, 2e-12, dt)[:, None]
+        E = self.field(x, y, z, ranges)
+        A = -np.trapz(E, dx=dt, axis=1)
         return A
 
     def _E0_and_phase(self, x, y, z, t):
@@ -141,7 +147,7 @@ class SimpleGaussianBeam:
         z = np.asarray(z)
         assert x.shape == y.shape == z.shape
         t = np.asarray(t)
-        assert t.shape == () or t.shape == x.shape
+        #assert t.shape == () or t.shape == x.shape
 
         # Distance of electron to focus (mod1_center)
         Zdif_x = z - self.focal_point[0]
