@@ -1,0 +1,30 @@
+---
+physical parameters:
+    laser:
+        focal size x: 100e-6  # m
+        focal size y: 100e-6  # m
+        wavelength: 106e-6  # m
+        pulse energy: 60e-6  # J
+        pulse duration: 300e-15  # s
+        delay: {random: uniform, args: [-200e-15, 200e-15]}  # s
+        cep: 0 # rad
+    xfel pulse generator: gaussian_train
+    xfel pulse generator settings:
+            number_peaks: 10
+            temporal peak spread: 3e-15  # s
+            temporal peak std: 1e-15  # s
+            central energy: 930  # eV
+            central energy std: 0.0  # eV
+            energy std: 0.2  # eV
+            correlation mean: 0
+            correlation std: 0
+    detector:
+        phibins: 16
+        energybins: [0, 200, 201]  # eV
+        theta center: 1.5708  # rad
+        theta acceptance": 0.8  # rad
+    target:
+        number of electrons: 200000
+        binding energy: 870.2  # eV
+other parameters:
+    samples: 100

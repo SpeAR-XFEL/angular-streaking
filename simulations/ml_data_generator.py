@@ -10,7 +10,29 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import h5py
 import sys
+from ruamel.yaml import YAML
 from p_tqdm import p_map
+from collections import OrderedDict
+import copy
+
+
+def sample_config(config):
+    c2 = copy.deepcopy(config)
+    sample_config_inplace(c2)
+    return c2
+
+
+def sample_config_inplace(config):
+    for key, item in config.items():
+        if isinstance(item, OrderedDict):
+            if 'random' in item:
+                if item['random'] == 'uniform':
+                    config[key] = np.random.uniform(*item['args'])
+                elif item['random'] == 'normal':
+                    config[key] = np.random.normal(*item['args'])
+            else:
+                sample_config_inplace(item)
+
 
 def simulate(delay):
     number_of_electrons = 200000
@@ -33,7 +55,7 @@ def simulate(delay):
     N_G = 10
     mu_t = np.random.normal(0, 3e-15, N_G)  # s
     mu_E = np.random.normal(xfel_energy, 0.01, N_G)  # eV
-    sigma_t = np.abs(np.random.normal(0.4e-15, 0.2e-15, N_G))
+    sigma_t = np.abs(np.random.normal(1e-15, 0.2e-15, N_G))
     sigma_E = np.abs(np.random.normal(xfel_energy_std, 0.1, N_G))
     corr_list = np.random.normal(0, 0, N_G)
     I_list = np.abs(np.random.normal(10, 1, N_G))
@@ -67,10 +89,17 @@ def simulate(delay):
 
 
 if __name__ == "__main__":
-    results = p_map(simulate, np.random.uniform(-400e-15, 400e-15, 100))
-    timedist, spectrograms, images, kick = list(map(list, zip(*results)))
-    with h5py.File("simulations/build/test.hdf5", "w") as f:
-        f.create_dataset("detector_images", data=images)
-        f.create_dataset("kick", data=kick)
-        f.create_dataset("spectrograms", data=spectrograms)
-        f.create_dataset("time_distribution", data=timedist)
+    yaml = YAML()
+    with open('simulations/configs/default.yaml') as f:
+        config = yaml.load(f)
+    scfg = sample_config(config)
+    print(config['physical parameters']['laser']['delay'])
+    print(scfg['physical parameters']['laser']['delay'])
+    
+    #results = p_map(simulate, np.random.uniform(-400e-15, 400e-15, 100))
+    #timedist, spectrograms, images, kick = list(map(list, zip(*results)))
+    #with h5py.File("simulations/build/test.hdf5", "w") as f:
+    #    f.create_dataset("detector_images", data=images)
+    #    f.create_dataset("kick", data=kick)
+    #    f.create_dataset("spectrograms", data=spectrograms)
+    #    f.create_dataset("time_distribution", data=timedist)
