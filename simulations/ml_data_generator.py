@@ -50,7 +50,7 @@ def simulate(config):
 
         pe = ionizer_Sauter(TEmap, binding_energy, number_of_electrons)
     else:
-        raise ValueError(f'Unsupported XFEL pulse generator: {pconf['xfel pulse generator']}')
+        raise ValueError(f'Unsupported XFEL pulse generator: {pconf["xfel pulse generator"]}')
 
     streaking_beam = SimpleGaussianBeam(
         focal_size=(pconf['laser']['focal size x'], pconf['laser']['focal size y']),
@@ -93,6 +93,6 @@ if __name__ == '__main__':
     h5opt = {'compression': 'gzip', 'compression_opts': 9}
     with h5py.File(config['other parameters']['output file name'], 'w') as f:
         f.create_dataset('detector_images', data=images, **h5opt)
-        f.create_dataset('kick', data=kick,  **h5opt)
-        f.create_dataset('spectrograms', data=spectrograms,  **h5opt)
-        f.create_dataset('time_distribution', data=timedist,  **h5opt)
+        f.create_dataset('kick', data=kick, **h5opt)
+        f.create_dataset('spectrograms', data=spectrograms, **h5opt)
+        f.create_dataset('time_distribution', data=timedist, **h5opt)
