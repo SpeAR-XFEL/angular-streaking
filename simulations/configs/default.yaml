@@ -3,28 +3,36 @@ physical parameters:
     laser:
         focal size x: 100e-6  # m
         focal size y: 100e-6  # m
-        wavelength: 106e-6  # m
-        pulse energy: 60e-6  # J
+        wavelength: 10.6e-6  # m
+        pulse energy: 100e-6  # J
         pulse duration: 300e-15  # s
-        delay: {random: uniform, args: [-200e-15, 200e-15]}  # s
-        cep: 0 # rad
-    xfel pulse generator: gaussian_train
+        delay: {random: uniform, args: [-400e-15, 400e-15]}  # s
+        cep: 3.142 # rad
+    xfel pulse generator: gaussian train
     xfel pulse generator settings:
-            number_peaks: 10
-            temporal peak spread: 3e-15  # s
-            temporal peak std: 1e-15  # s
-            central energy: 930  # eV
-            central energy std: 0.0  # eV
-            energy std: 0.2  # eV
+            number of peaks: 10
+            temporal peak center: 0  # s
+            temporal peak std: 3e-15  # s
+            temporal peak width: 1e-15  # s
+            temporal peak width std: 0.2e-15  # s
+            central energy mean: 930  # eV
+            central energy std: 1  # eV
+            energy width mean: 5  # eV
+            energy width std: 1  # eV
             correlation mean: 0
             correlation std: 0
+            intensity mean: 10
+            intensity std: 1
     detector:
-        phibins: 16
-        energybins: [0, 200, 201]  # eV
+        phi bins: 16
+        energy bins: [0, 200, 201]  # eV
         theta center: 1.5708  # rad
-        theta acceptance": 0.8  # rad
+        theta acceptance: 0.8  # rad
+        variable: kinetic energy  # kinetic energy or momentum
     target:
         number of electrons: 200000
         binding energy: 870.2  # eV
 other parameters:
-    samples: 100
+    samples: 500
+    time bins: [-17.7e-15, 17.7e-15, 81]
+    output file name: simulations/build/default.h5
