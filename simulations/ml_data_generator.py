@@ -10,9 +10,9 @@ import h5py
 import sys
 from ruamel.yaml import YAML
 from p_tqdm import p_map
+from tqdm import tqdm
 from collections import OrderedDict
 import copy
-import time
 
 
 def sample_config(config):
@@ -38,8 +38,8 @@ def simulate(config):
     if pconf['xfel pulse generator'] == 'gaussian train':
         gconf = pconf['xfel pulse generator settings']
         N_G = gconf['number of peaks']
-        mu_t = np.random.normal(gconf['temporal peak center'], gconf['temporal peak std'], N_G)  # s
-        mu_E = np.random.normal(gconf['central energy mean'], gconf['central energy std'], N_G)  # eV
+        mu_t = np.random.normal(gconf['temporal peak center'], gconf['temporal peak std'], N_G)
+        mu_E = np.random.normal(gconf['central energy mean'], gconf['central energy std'], N_G)
         sigma_t = np.abs(np.random.normal(gconf['temporal peak width'], gconf['temporal peak width std'], N_G))
         sigma_E = np.abs(np.random.normal(gconf['energy width mean'], gconf['energy width std'], N_G))
         corr_list = np.random.normal(gconf['correlation mean'], gconf['correlation std'], N_G)
@@ -79,7 +79,7 @@ def simulate(config):
 
     spec, _, _ = np.histogram2d(pe.t0, pe.Ekin() / const.e, bins=(t_bins, energy_bins))
     timedist = np.sum(spec, axis=1)
-    return timedist, spec.T / spec.max(), hist.T / hist.max(), kick * 1e25
+    return hist.T / hist.max(), spec.T / spec.max(), kick * 1e25, timedist
 
 
 if __name__ == '__main__':
@@ -88,11 +88,25 @@ if __name__ == '__main__':
     with open('simulations/configs/default.yaml' if len(sys.argv) < 2 else sys.argv[1]) as f:
         config = yaml.load(f)
 
-    results = p_map(simulate, [sample_config(config) for i in range(config['other parameters']['samples'])])
-    timedist, spectrograms, images, kick = list(map(list, zip(*results)))
+    s = config['other parameters']['samples']
+    phi = config['physical parameters']['detector']['phi bins']
+    ke = config['physical parameters']['detector']['energy bins']
+    ke = (ke[2] - 1) if isinstance(ke, list) else ke
+    t = config['other parameters']['time bins']
+    t = (t[2] - 1) if isinstance(t, list) else t
+
+    chunk = s if s < config['other parameters']['chunk size'] else config['other parameters']['chunk size']
+
+    f = h5py.File(config['other parameters']['output file name'], 'w')
     h5opt = {'compression': 'gzip', 'compression_opts': 9}
-    with h5py.File(config['other parameters']['output file name'], 'w') as f:
-        f.create_dataset('detector_images', data=images, **h5opt)
-        f.create_dataset('kick', data=kick, **h5opt)
-        f.create_dataset('spectrograms', data=spectrograms, **h5opt)
-        f.create_dataset('time_distribution', data=timedist, **h5opt)
+    a = f.create_dataset('detector_images', (s, ke, phi), chunks=(chunk, ke, phi), **h5opt)
+    b = f.create_dataset('spectrograms', (s, ke, t), chunks=(chunk, ke, t), **h5opt)
+    c = f.create_dataset('kick', (s,), chunks=(chunk,), **h5opt)
+    d = f.create_dataset('time_distribution', (s, t), chunks=(chunk, t), **h5opt)
+
+    for i, j, k, l in tqdm(zip(a.iter_chunks(), b.iter_chunks(), c.iter_chunks(), d.iter_chunks()), total=int(np.ceil(s/chunk)), desc='Total'):
+        results = p_map(simulate, [sample_config(config) for i in range(i[0].stop - i[0].start)], smoothing=0.1, leave=False, desc='Chunk')
+        a[i], b[j], c[k], d[l] = list(map(list, zip(*results)))
+    f.close()
+
+    

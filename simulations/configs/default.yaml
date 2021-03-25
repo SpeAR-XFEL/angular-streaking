@@ -7,15 +7,15 @@ physical parameters:
         pulse energy: 100e-6  # J
         pulse duration: 300e-15  # s
         delay: {random: uniform, args: [-400e-15, 400e-15]}  # s
-        cep: 3.142 # rad
+        cep: 3.142  # rad
     xfel pulse generator: gaussian train
     xfel pulse generator settings:
             number of peaks: 10
             temporal peak center: 0  # s
-            temporal peak std: 3e-15  # s
+            temporal peak std: 5e-15  # s
             temporal peak width: 1e-15  # s
             temporal peak width std: 0.2e-15  # s
-            central energy mean: 930  # eV
+            central energy mean: {random: uniform, args: [920, 960]}  # eV
             central energy std: 1  # eV
             energy width mean: 5  # eV
             energy width std: 1  # eV
@@ -33,6 +33,7 @@ physical parameters:
         number of electrons: 200000
         binding energy: 870.2  # eV
 other parameters:
-    samples: 500
+    samples: 2000
+    chunk size: 1000
     time bins: [-17.7e-15, 17.7e-15, 81]
     output file name: simulations/build/default.h5
