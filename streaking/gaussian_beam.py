@@ -27,7 +27,7 @@ class SimpleGaussianBeam:
         M2=1.0,
         energy=30 * 1e-6,
         duration=300e-15,
-        polarization=(0, 0, 1),
+        polarization=(np.sqrt(2), 1j * np.sqrt(2)),
     ):
         """
         Parameters
@@ -51,11 +51,11 @@ class SimpleGaussianBeam:
         duration : scalar
             FWHM pulse duration in seconds.
         polarization : tuple of scalar
-            Normalized Stokes vector (S1, S2, S3), defaults to right-hand circular polarization.
+            Normalized Jones vector, defaults to right-hand circular polarization.
         """
         assert len(focal_point) == 2
         assert len(focal_size) == 2
-        assert len(polarization) == 3
+        assert len(polarization) == 2
 
         self.focal_point = focal_point
         self.cep = cep
@@ -105,13 +105,8 @@ class SimpleGaussianBeam:
             Electric field vectors.
         """
         E0, phase = self._E0_and_phase(x, y, z, t)
-
-        # TODO: Implement Stokes vector.
-        polarization_vec = np.array(
-            (np.cos(-phase), np.sin(-phase), np.zeros_like(phase))
-        )
-
-        E_field = (E0 * polarization_vec).T
+        E_field = np.zeros((phase.shape[0], 3))
+        E_field[:, (0, 1)] = E0[:, None] * np.real(self.polarization * np.exp(1j * phase[:, None]))
 
         for otherbeam in self.other_beams_list:
             E = otherbeam.field(x, y, z, t)
@@ -120,15 +115,12 @@ class SimpleGaussianBeam:
 
     def vector_potential(self, x, y, z, t):
         E0, phase = self._E0_and_phase(x, y, z, t)
-
         phase -= np.pi / 2
 
-        # TODO: Implement Stokes vector.
-        polarization_vec = np.vstack(
-            (np.cos(-phase), np.sin(-phase), np.zeros_like(phase))
-        )
+        E_field = np.zeros((phase.shape[0], 3))
+        E_field[:, (0, 1)] = E0[:, None] * np.real(self.polarization * np.exp(1j * phase[:, None]))
 
-        A = (- E0 * polarization_vec / self.omega).T
+        A = (- E_field / self.omega).T
 
         for otherbeam in self.other_beams_list:
             A += otherbeam.vector_potential(x, y, z, t)
