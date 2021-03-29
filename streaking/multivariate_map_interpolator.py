@@ -42,7 +42,7 @@ class MultivariateMapInterpolator:
         return interpolator
 
     @classmethod
-    def from_gauss_blob_list(cls, means, covs, scales, resolution=(200, 200), sigma=3):
+    def from_gauss_blob_list(cls, means, covs, scales, resolution=(300, 300), sigma=3):
         diagonals = np.sqrt(np.diagonal(covs, axis1=-2, axis2=-1))
         domain = np.array((np.min(means - sigma * diagonals, axis=0), np.max(means + sigma * diagonals, axis=0))).T
         interpolator = cls(domain, resolution)
@@ -67,4 +67,7 @@ class MultivariateMapInterpolator:
         self.normalize()
 
     def eval(self, points):
-        return self.interp(points)
+        # return self.interp(points)
+        idx = (points - self.domain[:, 0]) / (self.domain[:, 1] - self.domain[:, 0]) * self.resolution
+        idx = idx.astype(int).T
+        return self.map[tuple(idx)]
