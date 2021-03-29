@@ -10,7 +10,7 @@ def covariance_from_correlation_2d(stds, cor):
     )
 
 
-def rejection_sampling(pdf, parameter_range, samples, params=()):
+def rejection_sampling(pdf, parameter_range, samples, oversampling=2, params=()):
     """
     Rejection sampling on the (optionally multivariate) probability density function `pdf`.
     As a fixed number of samples is provided, the runtime drastically depends on  how evenly
@@ -24,6 +24,8 @@ def rejection_sampling(pdf, parameter_range, samples, params=()):
         Parameter ranges for each dimension
     samples : int
         Number of samples
+    oversampling : scalar
+        Initial sampling factor to reduce number if required iterations, optional
     params : iterable
         Additional parameters passed to `pdf`, optional
 
@@ -35,14 +37,16 @@ def rejection_sampling(pdf, parameter_range, samples, params=()):
     parameter_range = np.atleast_2d(parameter_range)
     ndim = parameter_range.shape[0]
 
-    rejected = np.full(samples, True)
-    rand = np.empty((samples, ndim))
-    rejection = np.empty(samples)
-    sum_rejected = samples
-    while sum_rejected > 0:
+    osamples = int(samples * oversampling)
+
+    rejected = np.full(osamples, True)
+    rand = np.empty((osamples, ndim))
+    rejection = np.empty(osamples)
+    sum_rejected = osamples
+    while sum_rejected > osamples - samples:
         rand[rejected] = np.random.uniform(*parameter_range.T, (sum_rejected, ndim))
         rejection[rejected] = np.random.rand(sum_rejected)
         rejected[rejected] = rejection[rejected] > pdf(rand[rejected], *params)
         sum_rejected = np.sum(rejected)
-
+    rand = rand[~rejected][:samples]
     return np.squeeze(rand.T)
