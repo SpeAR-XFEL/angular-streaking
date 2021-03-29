@@ -40,11 +40,11 @@ def _classical_lorentz_ode(t, y, m, q, beam, t0):
     r, p = y
     E = beam.field(*r.T, t + t0)
     # Can’t use ClassicalElectron methods here...
-    pmag = np.linalg.norm(p, axis=0)
+    pmag = np.linalg.norm(p, axis=1)
     E0 = m * const.c ** 2
     Etot = np.sqrt(E0 ** 2 + (pmag * const.c) ** 2)
     gamma = Etot / E0
-    v = p / (gamma * m)
+    v = p / (gamma[:, None] * m)
     drdt = v
     # Triple cross product optimization (a × (b × c) = (a ∙ c) ∙ b - (a ∙ b) ∙ c)
     var = - v[:, 2][:, None] * E
