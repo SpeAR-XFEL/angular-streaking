@@ -119,11 +119,14 @@ class SimpleGaussianBeam:
     def vector_potential(self, x, y, z, t):
         E0, phase = self._E0_and_phase(x, y, z, t)
         phase -= np.pi / 2
+        # Correct for phase shift introduced by Jones vector
+        # => For t = 0, E _always_ points to +x
+        phase -= np.angle(self.polarization[1]) - np.pi / 2
 
         E_field = np.zeros((phase.shape[0], 3))
         E_field[:, (0, 1)] = E0[:, None] * np.real(self.polarization * np.exp(1j * phase[:, None]))
 
-        A = (- E_field / self.omega).T
+        A = (- E_field / self.omega)
 
         for otherbeam in self.other_beams_list:
             A += otherbeam.vector_potential(x, y, z, t)

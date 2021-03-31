@@ -1,7 +1,7 @@
 from streaking.gaussian_beam import SimpleGaussianBeam
 from streaking.ionization import ionizer_simple, ionizer_Sauter, naive_auger_generator
 from streaking.conversions import cartesian_to_spherical, ellipticity_to_jones_vector
-from streaking.streak import classical_lorentz_streaker
+from streaking.streak import classical_lorentz_streaker, dumb_streaker
 from streaking.multivariate_map_interpolator import MultivariateMapInterpolator
 from streaking.stats import covariance_from_correlation_2d
 import numpy as np
@@ -207,6 +207,7 @@ if __name__ == '__main__':
                 focal_size=(foc2, foc2))
 
         spe = classical_lorentz_streaker(pe, beam, (0, sliders['simulation']['time / s'].val), sliders['simulation']['stepsize / s'].val)
+        #spe = dumb_streaker(pe, beam)
         diff = time.perf_counter()-start
         per = diff/len(spe)
         print(f'Streaking took {diff:.1f} s, {per*1e6:.1f} µs / e-')
@@ -294,11 +295,11 @@ if __name__ == '__main__':
     sliders_spec = {
         'XFEL': {
             'peaks':              (1,       10,    1,     2,      '%1d',   update_electrons),
-            'width (1pk) / s':    (1e-17,   15e-15,None,  1e-15,  None,    update_electrons),
+            'width (1pk) / s':    (1e-17,   15e-15,None,  8e-16,  None,    update_electrons),
             'µ(E) (1pk) / eV':    (800,     2000,  None,  1200,   '%.0f',  update_electrons),
             'σ(E) (1pk) / eV':    (0.1,     10,    None,  0.5,    '%.1f',  update_electrons),
             'chirp (1pk)':        (-0.999,  0.999, None,  0,      '%.1f',  update_electrons),
-            'distance (2pk) / s': (0,       1e-14, None,  5e-15,  None,    update_electrons),
+            'distance (2pk) / s': (0,       1e-14, None,  7e-15,  None,    update_electrons),
             'focal spot / m':     (1e-6,    1e-4,  None,  2e-5,   None,    update_electrons),
         },
         'target': {
@@ -387,6 +388,6 @@ if __name__ == '__main__':
     #kebins2 = np.linspace(0, 200, 50)
     #kebins1 = np.linspace(48, 52, 50)
     plt.show()
-    #anim = animation.FuncAnimation(fig, animate,
+    #anim = matplotlib.animation.FuncAnimation(fig, animate,
     #                           frames=frames, blit=True)
-    #anim.save('build/anim_strongstreak_dur.mp4', fps=60, dpi=100)
+    #anim.save('simulations/build/anim_tilt_track.mp4', fps=60, dpi=100)
