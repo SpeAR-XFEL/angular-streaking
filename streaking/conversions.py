@@ -58,3 +58,9 @@ def cartesian_to_spherical(x, y, z):
     φ = np.arctan2(y, x)
     ϑ = np.arctan2(hxy, z)
     return np.array((r, ϑ, φ))
+
+
+def ellipticity_to_jones_vector(ellipticity, tilt, helicity):
+    tilt -= np.pi / 4
+    rot = np.array(((np.cos(tilt), -np.sin(tilt)), (np.sin(tilt), np.cos(tilt))))
+    return rot @ (np.sqrt(2), np.sqrt(2) * np.exp(helicity * 1j * ellipticity * np.pi / 2)) 

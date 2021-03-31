@@ -1,6 +1,6 @@
 from streaking.gaussian_beam import SimpleGaussianBeam
 from streaking.ionization import ionizer_simple, ionizer_Sauter, naive_auger_generator
-from streaking.conversions import cartesian_to_spherical
+from streaking.conversions import cartesian_to_spherical, ellipticity_to_jones_vector
 from streaking.streak import classical_lorentz_streaker
 from streaking.multivariate_map_interpolator import MultivariateMapInterpolator
 from streaking.stats import covariance_from_correlation_2d
@@ -191,7 +191,9 @@ if __name__ == '__main__':
             envelope_offset=sliders['streaking laser 1']['delay / s'].val,
             wavelength=sliders['streaking laser 1']['wavelen. / m'].val,
             duration=sliders['streaking laser 1']['width / s'].val,
-            focal_size=(foc, foc))
+            focal_size=(foc, foc),
+            polarization=ellipticity_to_jones_vector(sliders['streaking laser 1']['ellipticity'].val, sliders['streaking laser 1']['tilt'].val, 1)
+        )
 
         h = sliders['streaking laser harmonics']['harmonic'].val
         if h > 0:
@@ -314,6 +316,8 @@ if __name__ == '__main__':
             'delay / s':          (-1e-12,  1e-12, None,  0,      None,    update_streaking),
             'energy / J':         (0,       1e-3,  None,  30e-6,  None,    update_streaking),
             'CEP':                (0,       2*π,   None,  0,     '%1.2f',  update_streaking),
+            'ellipticity':        (0,       1,     None,  1,     '%1.2f',  update_streaking),
+            'tilt':               (0,       π,     None,  0,     '%1.2f',  update_streaking),
         },
         'streaking laser harmonics': {
             'harmonic':           (0,       3,     1,     0,      '%1d',   update_streaking),
@@ -359,10 +363,10 @@ if __name__ == '__main__':
             sliders[cat][key] = sl
 
     frames = 600
-    anirange = np.linspace(3.5e-16, 3.5e-15, frames)
+    anirange = np.linspace(0, np.pi, frames)
     def animate(frame):#1e-17,     5e-15
         #sliders['streaking laser 1']['CEP'].set_val(frame / frames * 2 * np.pi)
-        sliders['XFEL']['width (1pk) / s'].set_val(anirange[frame])
+        sliders['streaking laser 1']['tilt'].set_val(anirange[frame])
         #sliders['streaking laser 1']['focal spot / m'].set_val(frame / frames * (5e-4-1e-4) + 1e-4)
         return im1, im2, st1, st2, st3
 
