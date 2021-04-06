@@ -8,14 +8,12 @@ import os
 
 
 def dumb_streaker(electrons, beam, dumb=True, return_A_kick=False):
-    if dumb:
-        A = beam.vector_potential(*electrons.r.T, electrons.t0)
-    else:
-        A = beam.vector_potential_Arne(*electrons.r.T, electrons.t0)
+    A = beam.vector_potential(*electrons.r.T, electrons.t0)
+    electrons = ClassicalElectrons(electrons.r, electrons.p + const.e * A)
     if return_A_kick:
-        return ClassicalElectrons(electrons.r, electrons.p + const.e * A), np.linalg.norm(A, axis=1).max() * const.e
+        return electrons, np.linalg.norm(A, axis=1).max() * const.e
     else:
-        return ClassicalElectrons(electrons.r, electrons.p + const.e * A)
+        return electrons
 
 
 def _rk4(fun, t_span, y0, max_step, args=None):

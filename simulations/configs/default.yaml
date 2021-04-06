@@ -8,6 +8,8 @@ physical parameters:
         pulse duration: 300e-15  # s
         delay: {random: uniform, args: [-400e-15, 400e-15]}  # s
         cep: 3.142  # rad
+        ellipticity: 1  # 1: circular, 0: linear
+        tilt: 0  # rad
     xfel pulse generator: gaussian train
     xfel pulse generator settings:
             number of peaks: 10

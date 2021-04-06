@@ -4,6 +4,7 @@ from streaking.conversions import cartesian_to_spherical, ellipticity_to_jones_v
 from streaking.streak import classical_lorentz_streaker, dumb_streaker
 from streaking.multivariate_map_interpolator import MultivariateMapInterpolator
 from streaking.stats import covariance_from_correlation_2d
+from streaking.detectors import constant_polar_angle_tofs, energy_integrated_4pi
 import numpy as np
 import scipy.stats
 import scipy.constants as const
@@ -216,9 +217,6 @@ if __name__ == '__main__':
 
     def update_detector(val):
         global fb1, sp3, sp4
-        r, theta, phi  = cartesian_to_spherical(*pe.p.T)
-        sr, stheta, sphi = cartesian_to_spherical(*spe.p.T)
-        rsr, _, _ = cartesian_to_spherical(*spe.r.T)
 
         acc = sliders['detector'][r'ϑ accept. / rad'].val / 2
         center = sliders['detector'][r'ϑ center / rad'].val
@@ -228,25 +226,11 @@ if __name__ == '__main__':
         sp3 = ax3.axhspan(center + acc, center - acc, alpha=0.2, color='C3')
         sp4 = ax4.axhspan(center + acc, center - acc, alpha=0.2, color='C3')
 
-        mask1 = np.abs((theta - center)) < acc
-        mask2 = np.abs((stheta - center)) < acc
-
         phibincount = int(sliders['detector'][r'φ bins'].val)
         thetabincount = int(sliders['detector'][r'ϑ bins'].val)
-        phibins = np.linspace(0, 2 * np.pi, phibincount + 1)
-        thetabins = np.arcsin(np.linspace(-1, 1, thetabincount + 1)) + np.pi/2
-
-        ke1 = pe.Ekin()[mask1] / const.e
-        ke2 = spe.Ekin()[mask2] / const.e
-        kebins1 = np.linspace(*np.quantile(ke1, (discard / 2, 1 - discard / 2)), 100)
-        kebins2 = np.linspace(*np.quantile(ke2, (discard / 2, 1 - discard / 2)), 100)
-
-        data1, x1, y1 = np.histogram2d(
-            (phi[mask1] + np.pi / 2) % (2 * np.pi), ke1, bins=(phibins, kebins1)
-        )
-        data2, x2, y2 = np.histogram2d(
-            (sphi[mask2] + np.pi / 2) % (2 * np.pi), ke2, bins=(phibins, kebins2)
-        )
+        data1, x1, y1 = constant_polar_angle_tofs(pe, center, acc, phibincount, 'kinetic energy', 100, discard, 0.25, (0, 0, 0), (0, 0, 1))
+        data2, x2, y2 = constant_polar_angle_tofs(spe, center, acc, phibincount, 'kinetic energy', 100, discard, 0.25, (0, 0, 0), (0, 0, 1))
+ 
         im1.set_data(data1.T)
         im2.set_data(data2.T)
         im1.set_extent((x1[0], x1[-1], y1[0], y1[-1]))
@@ -254,13 +238,8 @@ if __name__ == '__main__':
         im1.autoscale()
         im2.autoscale()
 
-        data3, x3, y3 = np.histogram2d(
-            (phi + np.pi / 2) % (2 * np.pi), theta, bins=(phibins, thetabins)
-        )
-        data4, x4, y4 = np.histogram2d(
-            (sphi + np.pi / 2) % (2 * np.pi), stheta, bins=(phibins, thetabins)
-        )
-
+        data3, x3, y3 = energy_integrated_4pi(pe, thetabincount, phibincount, 0.25, (0, 0, 0))
+        data4, x4, y4 = energy_integrated_4pi(spe, thetabincount, phibincount, 0.25, (0, 0, 0))
         x3im, x4im = 0.5 * (x3[1:] + x3[:-1]), 0.5 * (x4[1:] + x4[:-1])
         y3im, y4im = 0.5 * (y3[1:] + y3[:-1]), 0.5 * (y4[1:] + y4[:-1])
         im3.set_data(x3im, y3im, data3.T)
@@ -277,11 +256,6 @@ if __name__ == '__main__':
         st1.set_data(x1, marg1x)
         st2.set_data(x1, marg1x)
         st3.set_data(x2, marg2x)
-        #st4.set_data(x2, marg2x - marg1x)
-        #axmarg1x.relim()
-        #axmarg1x.autoscale_view()
-        #fb1.remove()
-        #fb1 = axmarg2x.fill_between(x2, marg1x, marg2x, step='post', alpha=0.5, color='C1')
         st5.set_data(marg1y, y1)
         st6.set_data(marg2y, y2)
         st7.set_data(marg3y, y3)

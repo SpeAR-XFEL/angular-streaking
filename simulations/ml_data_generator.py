@@ -1,9 +1,10 @@
 from streaking.gaussian_beam import SimpleGaussianBeam
 from streaking.ionization import ionizer_Sauter, ionizer_simple
-from streaking.conversions import cartesian_to_spherical
-from streaking.streak import classical_lorentz_streaker, dumb_streaker
+from streaking.conversions import ellipticity_to_jones_vector
+from streaking.streak import dumb_streaker
 from streaking.multivariate_map_interpolator import MultivariateMapInterpolator
 from streaking.stats import covariance_from_correlation_2d
+from streaking.detectors import constant_polar_angle_tofs
 import numpy as np
 import scipy.constants as const
 import h5py
@@ -49,6 +50,8 @@ def simulate(config):
         TEmap = MultivariateMapInterpolator.from_gauss_blob_list(np.stack((mu_t, mu_E)).T, covs, I_list)
 
         pe = ionizer_Sauter(TEmap, binding_energy, number_of_electrons)
+    elif pconf['xfel pulse generator'] == 'gaussian':
+        pe = ionizer_simple(2, (0, 1e3), ((1e-15, 0), (0, 5)), 870, 1e-6, number_of_electrons)
     else:
         raise ValueError(f'Unsupported XFEL pulse generator: {pconf["xfel pulse generator"]}')
 
@@ -58,24 +61,16 @@ def simulate(config):
         cep=pconf['laser']['cep'],
         wavelength=pconf['laser']['wavelength'],
         energy=pconf['laser']['pulse energy'],
-        duration=pconf['laser']['pulse duration'])
+        duration=pconf['laser']['pulse duration'],
+        polarization=ellipticity_to_jones_vector(pconf['laser']['ellipticity'], pconf['laser']['tilt'], 1))
 
-    detector_bins = np.linspace(0, 2 * np.pi, pconf['detector']['phi bins'] + 1)
     eb = pconf['detector']['energy bins']
     energy_bins = np.linspace(*eb) if isinstance(eb, list) else eb
     tb = config['other parameters']['time bins']
 
     t_bins = np.linspace(*tb) if isinstance(tb, list) else tb
     streaked_pe, kick = dumb_streaker(pe, streaking_beam, return_A_kick=True)
-    sr, stheta, sphi = cartesian_to_spherical(*streaked_pe.p.T)
-    mask = np.abs(stheta - pconf['detector']['theta center']) < pconf['detector']['theta acceptance']
-    variable = pconf['detector']['variable']
-    if variable == 'kinetic energy':
-        hist, x, y = np.histogram2d((sphi[mask] + np.pi / 2) % (2 * np.pi), streaked_pe.Ekin()[mask] / const.e, bins=(detector_bins, energy_bins))
-    elif variable == 'momentum':
-        hist, x, y = np.histogram2d((sphi[mask] + np.pi / 2) % (2 * np.pi), 3e25 * np.linalg.norm(streaked_pe.p, axis=1)[mask], bins=(detector_bins, energy_bins))
-    else:
-        raise ValueError(f'Unsupported variable: {variable}')
+    hist, x, y = constant_polar_angle_tofs(streaked_pe, pconf['detector']['theta center'], pconf['detector']['theta acceptance'], pconf['detector']['phi bins'], pconf['detector']['variable'], energy_bins, None, 0.25, None, None)
 
     spec, _, _ = np.histogram2d(pe.t0, pe.Ekin() / const.e, bins=(t_bins, energy_bins))
     timedist = np.sum(spec, axis=1)
@@ -105,8 +100,7 @@ if __name__ == '__main__':
     d = f.create_dataset('time_distribution', (s, t), chunks=(chunk, t), **h5opt)
 
     for i, j, k, l in tqdm(zip(a.iter_chunks(), b.iter_chunks(), c.iter_chunks(), d.iter_chunks()), total=int(np.ceil(s/chunk)), desc='Total'):
-        results = p_map(simulate, [sample_config(config) for i in range(i[0].stop - i[0].start)], smoothing=0.1, leave=False, desc='Chunk')
+        results = p_map(simulate, [sample_config(config) for i in range(i[0].stop - i[0].start)], smoothing=0.05, leave=False, desc='Chunk', num_cpus=20)
+        # results = map(simulate, [sample_config(config) for i in range(i[0].stop - i[0].start)])
         a[i], b[j], c[k], d[l] = list(map(list, zip(*results)))
     f.close()
-
-    
