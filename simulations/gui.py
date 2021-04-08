@@ -8,6 +8,7 @@ from streaking.detectors import constant_polar_angle_tofs, energy_integrated_4pi
 import numpy as np
 import scipy.stats
 import scipy.constants as const
+from scipy.spatial.transform import Rotation
 from matplotlib.widgets import Slider
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
@@ -193,7 +194,8 @@ if __name__ == '__main__':
             wavelength=sliders['streaking laser 1']['wavelen. / m'].val,
             duration=sliders['streaking laser 1']['width / s'].val,
             focal_size=(foc, foc),
-            polarization=ellipticity_to_jones_vector(sliders['streaking laser 1']['ellipticity'].val, sliders['streaking laser 1']['tilt'].val, 1)
+            polarization=ellipticity_to_jones_vector(sliders['streaking laser 1']['ellipticity'].val, sliders['streaking laser 1']['tilt'].val, 1),
+            rotation=Rotation.from_euler('y', sliders['streaking laser 1']['cross. angle / rad'].val)
         )
 
         h = sliders['streaking laser harmonics']['harmonic'].val
@@ -203,12 +205,12 @@ if __name__ == '__main__':
                 energy=sliders['streaking laser harmonics']['energy / J'].val,
                 cep=sliders['streaking laser 1']['CEP'].val,
                 envelope_offset=sliders['streaking laser harmonics']['delay / s'].val,
-                wavelength=sliders['streaking laser 1']['wavelen. / m'].val/h,
+                wavelength=sliders['streaking laser 1']['wavelen. / m'].val / h,
                 duration=sliders['streaking laser 1']['width / s'].val,
                 focal_size=(foc2, foc2))
 
-        spe = classical_lorentz_streaker(pe, beam, (0, sliders['simulation']['time / s'].val), sliders['simulation']['stepsize / s'].val)
-        #spe = dumb_streaker(pe, beam)
+        #spe = classical_lorentz_streaker(pe, beam, (0, sliders['simulation']['time / s'].val), sliders['simulation']['stepsize / s'].val)
+        spe = dumb_streaker(pe, beam)
         diff = time.perf_counter()-start
         per = diff/len(spe)
         print(f'Streaking took {diff:.1f} s, {per*1e6:.1f} µs / e-')
@@ -285,6 +287,7 @@ if __name__ == '__main__':
             'Auger KE / eV':      (50,      1000,  None,  60,    '%.1f',   update_electrons),
         },
         'streaking laser 1': {
+            'cross. angle / rad': (-np.pi,  np.pi, None,  0,      '%1.2f', update_streaking),
             'focal spot / m':     (100e-6,  2e-3,  None,  5e-4,   None,    update_streaking),
             'wavelen. / m':       (1e-7,    10e-6, None,  10e-6,  None,    update_streaking),
             'width / s':          (1e-14,   1e-12, None,  3e-13,  None,    update_streaking),

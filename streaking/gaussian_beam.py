@@ -28,6 +28,8 @@ class SimpleGaussianBeam:
         energy=30 * 1e-6,
         duration=300e-15,
         polarization=(np.sqrt(2), 1j * np.sqrt(2)),
+        origin=(0, 0, 0),
+        rotation=None,
     ):
         """
         Parameters
@@ -82,6 +84,8 @@ class SimpleGaussianBeam:
         )
         self.envelope_offset = envelope_offset
         self.polarization = polarization
+        self.origin = origin
+        self.rotation = rotation
         self.other_beams_list = []
 
     def field(self, x, y, z, t):
@@ -104,41 +108,35 @@ class SimpleGaussianBeam:
         E : (..., 3) array_like
             Electric field vectors.
         """
-        E0, phase = self._E0_and_phase(x, y, z, t)
-        E_field = np.zeros((phase.shape[0], 3))
-        # Correct for phase shift introduced by Jones vector
-        # => For t = 0, E _always_ points to +x
-        phase -= np.angle(self.polarization[1]) - np.pi / 2
+        E_field = self._E_this_beam(x, y, z, t)
 
-        E_field[:, (0, 1)] = E0[:, None] * np.real(self.polarization * np.exp(1j * phase[:, None]))
         for otherbeam in self.other_beams_list:
             E = otherbeam.field(x, y, z, t)
             E_field += E
         return E_field
 
     def vector_potential(self, x, y, z, t):
-        E0, phase = self._E0_and_phase(x, y, z, t)
-        phase -= np.pi / 2
-        # Correct for phase shift introduced by Jones vector
-        # => For t = 0, E _always_ points to +x
-        phase -= np.angle(self.polarization[1]) - np.pi / 2
-
-        E_field = np.zeros((phase.shape[0], 3))
-        E_field[:, (0, 1)] = E0[:, None] * np.real(self.polarization * np.exp(1j * phase[:, None]))
-
-        A = (- E_field / self.omega)
+        E_field = self._E_this_beam(x, y, z, t, phase_offset=-np.pi / 2)
+        A = -E_field / self.omega
 
         for otherbeam in self.other_beams_list:
             A += otherbeam.vector_potential(x, y, z, t)
         return A
 
-    def _E0_and_phase(self, x, y, z, t):
+    def _E_this_beam(self, x, y, z, t, phase_offset=0):
         x = np.asarray(x)
         y = np.asarray(y)
         z = np.asarray(z)
         assert x.shape == y.shape == z.shape
         t = np.asarray(t)
         assert t.shape == () or t.shape == x.shape
+
+        x -= self.origin[0]
+        y -= self.origin[1]
+        z -= self.origin[2]
+
+        if self.rotation is not None:
+            x, y, z = self.rotation.apply(np.array((x, y, z)).T).T
 
         # Distance of electron to focus (mod1_center)
         Zdif_x = z - self.focal_point[0]
@@ -165,9 +163,24 @@ class SimpleGaussianBeam:
             - 0.5 * np.arctan(Zdif_x / self.zRx)
             - 0.5 * np.arctan(Zdif_y / self.zRy)
             + self.cep
+            + phase_offset
         )
 
-        return central_E_field * offaxis_pulsed_factor, phase
+        E0 = central_E_field * offaxis_pulsed_factor
+
+        E_field = np.zeros((phase.shape[0], 3))
+        # Correct for phase shift introduced by Jones vector
+        # => For t = 0, E _always_ points to +x
+        phase -= np.angle(self.polarization[1]) - np.pi / 2
+
+        E_field[:, (0, 1)] = E0[:, None] * np.real(
+            self.polarization * np.exp(1j * phase[:, None])
+        )
+
+        if self.rotation is not None:
+            E_field = self.rotation.apply(E_field)
+
+        return E_field
 
     def __iadd__(self, other):
         """
