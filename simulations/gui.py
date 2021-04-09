@@ -70,8 +70,8 @@ if __name__ == '__main__':
     im4 = matplotlib.image.NonUniformImage(ax4, origin='lower', extent=(0, 2 * π, 0, π))
     ax3.images.append(im3)
     ax4.images.append(im4)
-    sp3 = ax3.axhspan(1, 1.5, alpha=0.25, color='C3')
-    sp4 = ax4.axhspan(1, 1.5, alpha=0.25, color='C3')
+    sp3, = ax3.fill((0, 0), color='C3', alpha=0.25)
+    sp4, = ax4.fill((0, 0), color='C3', alpha=0.25)
 
     for ax in (ax3, ax4):
         ax.set_xlabel(r'$\varphi$')
@@ -227,17 +227,29 @@ if __name__ == '__main__':
 
         r = Rotation.from_euler('YX', (sliders['detector'][r'Y rotation / rad'].val, sliders['detector'][r'X rotation / rad'].val))
 
-        philin = np.linspace(0, 2 * np.pi, 100)
-        det_bins_upper = spherical_to_cartesian(1, np.ones(100) * (center + acc), philin)
-        det_bins_lower = spherical_to_cartesian(1, np.ones(100) * (center - acc), philin)
-        det_bins_upper = cartesian_to_spherical(*r.apply(det_bins_upper.T).T)[1]
-        det_bins_lower = cartesian_to_spherical(*r.apply(det_bins_lower.T).T)[1]
-        sp3.remove()
-        sp4.remove()
-        sp3 = ax3.fill_between(philin, det_bins_lower, det_bins_upper, alpha=0.3, color='C3')
-        sp4 = ax4.fill_between(philin, det_bins_lower, det_bins_upper, alpha=0.3, color='C3')
+        # Plot of the acceptance region
+        phidet = np.linspace(-np.pi, np.pi, 1000)
+        thetadet_l = np.ones_like(phidet) * center - acc
+        thetadet_h = np.ones_like(phidet) * center + acc
+        _, thetadet_l, phidet_l = cartesian_to_spherical(*r.apply(spherical_to_cartesian(1, thetadet_l, phidet).T).T)
+        _, thetadet_h, phidet_h = cartesian_to_spherical(*r.apply(spherical_to_cartesian(1, thetadet_h, phidet).T).T)
+        phidet_l = (phidet_l + np.pi / 2 ) % (2 * np.pi)
+        phidet_h = (phidet_h + np.pi / 2 ) % (2 * np.pi)
+        # Try to roll angles to obtain non-self-intersecting polygon...
+        i = 0
+        while(np.abs(np.diff(phidet_l)).max() > 100 * np.abs(np.diff(phidet_l)).mean() and i < len(phidet)):
+            phidet_l = np.roll(phidet_l, 1)
+            thetadet_l = np.roll(thetadet_l, 1)
+            i += 1
+        i = 0
+        while(np.abs(np.diff(phidet_h)).max() > 100 * np.abs(np.diff(phidet_h)).mean() and i < len(phidet)):
+            phidet_h = np.roll(phidet_h, -1)
+            thetadet_h = np.roll(thetadet_h, -1)
+            i += 1
+        xy = np.array((np.concatenate((phidet_l, phidet_h[::-1])), np.concatenate((thetadet_l, thetadet_h[::-1])))).T
+        sp3.set_xy(xy)
+        sp4.set_xy(xy)
 
-        
         data1, x1, y1 = constant_polar_angle_tofs(pe, center, acc, phibincount, 'kinetic energy', 100, discard, 0.25, (0, 0, 0), r)
         data2, x2, y2 = constant_polar_angle_tofs(spe, center, acc, phibincount, 'kinetic energy', 100, discard, 0.25, (0, 0, 0), r)
 
