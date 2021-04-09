@@ -1,6 +1,6 @@
 from streaking.gaussian_beam import SimpleGaussianBeam
 from streaking.ionization import ionizer_simple, ionizer_Sauter, naive_auger_generator
-from streaking.conversions import cartesian_to_spherical, ellipticity_to_jones_vector
+from streaking.conversions import cartesian_to_spherical, spherical_to_cartesian, ellipticity_to_jones_vector
 from streaking.streak import classical_lorentz_streaker, dumb_streaker
 from streaking.multivariate_map_interpolator import MultivariateMapInterpolator
 from streaking.stats import covariance_from_correlation_2d
@@ -198,16 +198,16 @@ if __name__ == '__main__':
             rotation=Rotation.from_euler('y', sliders['streaking laser 1']['cross. angle / rad'].val)
         )
 
-        h = sliders['streaking laser harmonics']['harmonic'].val
-        if h > 0:
-            foc2 = sliders['streaking laser harmonics']['focal spot / m'].val
-            beam += SimpleGaussianBeam(
-                energy=sliders['streaking laser harmonics']['energy / J'].val,
-                cep=sliders['streaking laser 1']['CEP'].val,
-                envelope_offset=sliders['streaking laser harmonics']['delay / s'].val,
-                wavelength=sliders['streaking laser 1']['wavelen. / m'].val / h,
-                duration=sliders['streaking laser 1']['width / s'].val,
-                focal_size=(foc2, foc2))
+        # h = sliders['streaking laser harmonics']['harmonic'].val
+        # if h > 0:
+        #     foc2 = sliders['streaking laser harmonics']['focal spot / m'].val
+        #     beam += SimpleGaussianBeam(
+        #         energy=sliders['streaking laser harmonics']['energy / J'].val,
+        #         cep=sliders['streaking laser 1']['CEP'].val,
+        #         envelope_offset=sliders['streaking laser harmonics']['delay / s'].val,
+        #         wavelength=sliders['streaking laser 1']['wavelen. / m'].val / h,
+        #         duration=sliders['streaking laser 1']['width / s'].val,
+        #         focal_size=(foc2, foc2))
 
         #spe = classical_lorentz_streaker(pe, beam, (0, sliders['simulation']['time / s'].val), sliders['simulation']['stepsize / s'].val)
         spe = dumb_streaker(pe, beam)
@@ -222,17 +222,25 @@ if __name__ == '__main__':
 
         acc = sliders['detector'][r'ϑ accept. / rad'].val / 2
         center = sliders['detector'][r'ϑ center / rad'].val
-
-        sp3.remove()
-        sp4.remove()
-        sp3 = ax3.axhspan(center + acc, center - acc, alpha=0.2, color='C3')
-        sp4 = ax4.axhspan(center + acc, center - acc, alpha=0.2, color='C3')
-
         phibincount = int(sliders['detector'][r'φ bins'].val)
         thetabincount = int(sliders['detector'][r'ϑ bins'].val)
-        data1, x1, y1 = constant_polar_angle_tofs(pe, center, acc, phibincount, 'kinetic energy', 100, discard, 0.25, (0, 0, 0), (0, 0, 1))
-        data2, x2, y2 = constant_polar_angle_tofs(spe, center, acc, phibincount, 'kinetic energy', 100, discard, 0.25, (0, 0, 0), (0, 0, 1))
- 
+
+        r = Rotation.from_euler('YX', (sliders['detector'][r'Y rotation / rad'].val, sliders['detector'][r'X rotation / rad'].val))
+
+        philin = np.linspace(0, 2 * np.pi, 100)
+        det_bins_upper = spherical_to_cartesian(1, np.ones(100) * (center + acc), philin)
+        det_bins_lower = spherical_to_cartesian(1, np.ones(100) * (center - acc), philin)
+        det_bins_upper = cartesian_to_spherical(*r.apply(det_bins_upper.T).T)[1]
+        det_bins_lower = cartesian_to_spherical(*r.apply(det_bins_lower.T).T)[1]
+        sp3.remove()
+        sp4.remove()
+        sp3 = ax3.fill_between(philin, det_bins_lower, det_bins_upper, alpha=0.3, color='C3')
+        sp4 = ax4.fill_between(philin, det_bins_lower, det_bins_upper, alpha=0.3, color='C3')
+
+        
+        data1, x1, y1 = constant_polar_angle_tofs(pe, center, acc, phibincount, 'kinetic energy', 100, discard, 0.25, (0, 0, 0), r)
+        data2, x2, y2 = constant_polar_angle_tofs(spe, center, acc, phibincount, 'kinetic energy', 100, discard, 0.25, (0, 0, 0), r)
+
         im1.set_data(data1.T)
         im2.set_data(data2.T)
         im1.set_extent((x1[0], x1[-1], y1[0], y1[-1]))
@@ -248,6 +256,7 @@ if __name__ == '__main__':
         im4.set_data(x4im, y4im, data4.T)
         im3.autoscale()
         im4.autoscale()
+
 
         marg1x = np.append(data1.T.sum(axis=0), 0)
         marg2x = np.append(data2.T.sum(axis=0), 0)
@@ -297,13 +306,13 @@ if __name__ == '__main__':
             'ellipticity':        (0,       1,     None,  1,     '%1.2f',  update_streaking),
             'tilt':               (0,       π,     None,  0,     '%1.2f',  update_streaking),
         },
-        'streaking laser harmonics': {
-            'harmonic':           (0,       3,     1,     0,      '%1d',   update_streaking),
-            'focal spot / m':     (100e-6,  2e-3,  None,  5e-4,   None,    update_streaking),
-            'wavelen. / m':       (1e-7,    10e-6, None,  10e-6,  None,    update_streaking),
-            'delay / s':          (-1e-12,  1e-12, None,  0,      None,    update_streaking),
-            'energy / J':         (0,       1e-3,  None,  0,      None,    update_streaking),
-        },
+        # 'streaking laser harmonics': {
+        #     'harmonic':           (0,       3,     1,     0,      '%1d',   update_streaking),
+        #     'focal spot / m':     (100e-6,  2e-3,  None,  5e-4,   None,    update_streaking),
+        #     'wavelen. / m':       (1e-7,    10e-6, None,  10e-6,  None,    update_streaking),
+        #     'delay / s':          (-1e-12,  1e-12, None,  0,      None,    update_streaking),
+        #     'energy / J':         (0,       1e-3,  None,  0,      None,    update_streaking),
+        # },
         'simulation': {
             'time / s':           (0,       1e-11, None,  1e-12,  None,    update_streaking),
             'stepsize / s':       (5e-15,   2e-14, None,  1e-14,  None,    update_streaking),
@@ -313,6 +322,8 @@ if __name__ == '__main__':
             r'ϑ center / rad':    (0,       np.pi,  None,  np.pi/2,'%1.2f',update_detector),
             r'φ bins':            (8,       64,     8,     32,    '%1d',   update_detector),
             r'ϑ bins':            (8,       64,     8,     32,    '%1d',   update_detector),
+            'Y rotation / rad':   (-np.pi/2,np.pi/2,None,  0,      '%1.2f', update_detector),
+            'X rotation / rad':   (-np.pi/2,np.pi/2,None,  0,      '%1.2f', update_detector),
         }
 
     #        Name                  min      max    step   start   fmt       update function

@@ -3,7 +3,7 @@ import scipy.constants as const
 from streaking.conversions import cartesian_to_spherical
 
 
-def _sphere_intersection(electrons, radius):
+def _sphere_intersection(electrons, radius, origin=(0, 0, 0), rotation=None):
     """
     Calculates where the electron trajectories intersect the sphere of radius `radius` in spherical coordinates.
     Uniform motion is assumed.
@@ -11,14 +11,22 @@ def _sphere_intersection(electrons, radius):
     # There might be an easier way.
     # Currently I solve |r̲ + d * p̲| = radius for d (positive solution),
     # then r̲ + d * p̲ is the point of intersection.
-    px, py, pz = electrons.p.T
-    x, y, z = electrons.r.T
+
+    if rotation is not None:
+        ep = rotation.inv().apply(electrons.p)
+        er = rotation.inv().apply(electrons.r)
+    else:
+        ep = electrons.p
+        er = electrons.r
+
+    px, py, pz = ep.T
+    x, y, z = er.T
     rsq = x ** 2 + y ** 2 + z ** 2
     assert np.all(rsq < radius ** 2), "Electron position outside detector volume"
     psq = px ** 2 + py ** 2 + pz ** 2
     xpx = x * px + y * py + z * pz
     d = (-2 * xpx + np.sqrt(4 * xpx ** 2 - 4 * psq * (rsq - radius ** 2))) / (2 * psq)
-    intersection_point = electrons.r + d[:, None] * electrons.p
+    intersection_point = er + d[:, None] * ep
     return cartesian_to_spherical(*intersection_point.T)
 
 
@@ -34,12 +42,12 @@ def constant_polar_angle_tofs(
     variable_bins,
     variable_quantile,
     radius,
-    origin,
-    normal_vector,
+    origin=(0, 0, 0),
+    rotation=None,
 ):
     """ Calling this 'tofs' might be a slight overstatement..."""
 
-    r, theta, phi = _sphere_intersection(electrons, radius)
+    r, theta, phi = _sphere_intersection(electrons, radius, origin, rotation)
     mask = np.abs((theta - polar_center)) < polar_acceptance
     phibins = np.linspace(0, 2 * np.pi, azimuth_bins + 1)
     variable_bins = np.asarray(variable_bins)
