@@ -12,12 +12,16 @@ def _sphere_intersection(electrons, radius, origin=(0, 0, 0), rotation=None):
     # Currently I solve |r̲ + d * p̲| = radius for d (positive solution),
     # then r̲ + d * p̲ is the point of intersection.
 
+    origin = np.asarray(origin)[:, None]
+
     if rotation is not None:
         ep = rotation.inv().apply(electrons.p)
         er = rotation.inv().apply(electrons.r)
     else:
         ep = electrons.p
-        er = electrons.r
+        er = np.copy(electrons.r)
+
+    er -= origin.T
 
     px, py, pz = ep.T
     x, y, z = er.T
@@ -33,7 +37,7 @@ def _sphere_intersection(electrons, radius, origin=(0, 0, 0), rotation=None):
 # TODO: Implement origin+normal vector or transformation matrix or something else for both variants
 
 
-def constant_polar_angle_tofs(
+def constant_polar_angle_ring(
     electrons,
     polar_center,
     polar_acceptance,
@@ -45,8 +49,6 @@ def constant_polar_angle_tofs(
     origin=(0, 0, 0),
     rotation=None,
 ):
-    """ Calling this 'tofs' might be a slight overstatement..."""
-
     r, theta, phi = _sphere_intersection(electrons, radius, origin, rotation)
     mask = np.abs((theta - polar_center)) < polar_acceptance
     phibins = np.linspace(0, 2 * np.pi, azimuth_bins + 1)
@@ -72,7 +74,7 @@ def constant_polar_angle_tofs(
 
 
 def energy_integrated_4pi(electrons, polar_bins, azimuth_bins, radius, origin):
-    r, theta, phi = _sphere_intersection(electrons, radius)
+    r, theta, phi = _sphere_intersection(electrons, radius, origin=origin)
 
     b1 = np.linspace(0, 2 * np.pi, azimuth_bins + 1)
     b2 = np.arcsin(np.linspace(-1, 1, polar_bins + 1)) + np.pi / 2

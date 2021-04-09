@@ -4,7 +4,7 @@ from streaking.conversions import cartesian_to_spherical, spherical_to_cartesian
 from streaking.streak import classical_lorentz_streaker, dumb_streaker
 from streaking.multivariate_map_interpolator import MultivariateMapInterpolator
 from streaking.stats import covariance_from_correlation_2d
-from streaking.detectors import constant_polar_angle_tofs, energy_integrated_4pi
+from streaking.detectors import constant_polar_angle_ring, energy_integrated_4pi
 import numpy as np
 import scipy.stats
 import scipy.constants as const
@@ -250,8 +250,8 @@ if __name__ == '__main__':
         sp3.set_xy(xy)
         sp4.set_xy(xy)
 
-        data1, x1, y1 = constant_polar_angle_tofs(pe, center, acc, phibincount, 'kinetic energy', 100, discard, 0.25, (0, 0, 0), r)
-        data2, x2, y2 = constant_polar_angle_tofs(spe, center, acc, phibincount, 'kinetic energy', 100, discard, 0.25, (0, 0, 0), r)
+        data1, x1, y1 = constant_polar_angle_ring(pe, center, acc, phibincount, 'kinetic energy', 100, discard, 0.25, (0, 0, sliders['detector'][r'z offset / m'].val), r)
+        data2, x2, y2 = constant_polar_angle_ring(spe, center, acc, phibincount, 'kinetic energy', 100, discard, 0.25, (0, 0, sliders['detector'][r'z offset / m'].val), r)
 
         im1.set_data(data1.T)
         im2.set_data(data2.T)
@@ -260,8 +260,8 @@ if __name__ == '__main__':
         im1.autoscale()
         im2.autoscale()
 
-        data3, x3, y3 = energy_integrated_4pi(pe, thetabincount, phibincount, 0.25, (0, 0, 0))
-        data4, x4, y4 = energy_integrated_4pi(spe, thetabincount, phibincount, 0.25, (0, 0, 0))
+        data3, x3, y3 = energy_integrated_4pi(pe, thetabincount, phibincount, 0.25, (0, 0, sliders['detector'][r'z offset / m'].val))
+        data4, x4, y4 = energy_integrated_4pi(spe, thetabincount, phibincount, 0.25, (0, 0, sliders['detector'][r'z offset / m'].val))
         x3im, x4im = 0.5 * (x3[1:] + x3[:-1]), 0.5 * (x4[1:] + x4[:-1])
         y3im, y4im = 0.5 * (y3[1:] + y3[:-1]), 0.5 * (y4[1:] + y4[:-1])
         im3.set_data(x3im, y3im, data3.T)
@@ -334,8 +334,9 @@ if __name__ == '__main__':
             r'ϑ center / rad':    (0,       np.pi,  None,  np.pi/2,'%1.2f',update_detector),
             r'φ bins':            (8,       64,     8,     32,    '%1d',   update_detector),
             r'ϑ bins':            (8,       64,     8,     32,    '%1d',   update_detector),
-            'Y rotation / rad':   (-np.pi/2,np.pi/2,None,  0,      '%1.2f', update_detector),
-            'X rotation / rad':   (-np.pi/2,np.pi/2,None,  0,      '%1.2f', update_detector),
+            'z offset / m':       (-0.249,    0.249,    None,  0,     '%1.2f', update_detector),
+            'Y rotation / rad':   (-np.pi/2,np.pi/2,None,  0,     '%1.2f', update_detector),
+            'X rotation / rad':   (-np.pi/2,np.pi/2,None,  0,     '%1.2f', update_detector),
         }
 
     #        Name                  min      max    step   start   fmt       update function

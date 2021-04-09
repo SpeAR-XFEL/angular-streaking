@@ -4,7 +4,7 @@ from streaking.conversions import ellipticity_to_jones_vector
 from streaking.streak import dumb_streaker
 from streaking.multivariate_map_interpolator import MultivariateMapInterpolator
 from streaking.stats import covariance_from_correlation_2d
-from streaking.detectors import constant_polar_angle_tofs
+from streaking.detectors import constant_polar_angle_ring
 import numpy as np
 import scipy.constants as const
 import h5py
@@ -70,7 +70,7 @@ def simulate(config):
 
     t_bins = np.linspace(*tb) if isinstance(tb, list) else tb
     streaked_pe, kick = dumb_streaker(pe, streaking_beam, return_A_kick=True)
-    hist, x, y = constant_polar_angle_tofs(streaked_pe, pconf['detector']['theta center'], pconf['detector']['theta acceptance'], pconf['detector']['phi bins'], pconf['detector']['variable'], energy_bins, None, 0.25, None, None)
+    hist, x, y = constant_polar_angle_ring(streaked_pe, pconf['detector']['theta center'], pconf['detector']['theta acceptance'], pconf['detector']['phi bins'], pconf['detector']['variable'], energy_bins, None, 0.25, None, None)
 
     spec, _, _ = np.histogram2d(pe.t0, pe.Ekin() / const.e, bins=(t_bins, energy_bins))
     timedist = np.sum(spec, axis=1)
