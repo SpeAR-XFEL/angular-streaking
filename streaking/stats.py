@@ -1,3 +1,4 @@
+from streaking.conversions import cartesian_to_spherical
 import numpy as np
 
 
@@ -46,7 +47,23 @@ def rejection_sampling(pdf, parameter_range, samples, oversampling=2, params=())
     while sum_rejected > osamples - samples:
         rand[rejected] = np.random.uniform(*parameter_range.T, (sum_rejected, ndim))
         rejection[rejected] = np.random.rand(sum_rejected)
-        rejected[rejected] = rejection[rejected] > pdf(rand[rejected], *params)
+        rejected[rejected] = rejection[rejected] > np.squeeze(pdf(rand[rejected], *params))
+        sum_rejected = np.sum(rejected)
+    rand = rand[~rejected][:samples]
+    return np.squeeze(rand.T)
+
+
+def rejection_sampling_spherical(pdf, samples, oversampling=2, params=()):
+    osamples = int(samples * oversampling)
+    rejected = np.full(osamples, True)
+    rand = np.empty((osamples, 3))
+    rejection = np.empty(osamples)
+    sum_rejected = osamples
+    while sum_rejected > osamples - samples:
+        rand[rejected] = np.random.normal(size=(sum_rejected, 3))
+        rejection[rejected] = np.random.rand(sum_rejected)
+        _, theta, phi = cartesian_to_spherical(*rand[rejected].T)
+        rejected[rejected] = rejection[rejected] > pdf(theta, phi, *params)
         sum_rejected = np.sum(rejected)
     rand = rand[~rejected][:samples]
     return np.squeeze(rand.T)

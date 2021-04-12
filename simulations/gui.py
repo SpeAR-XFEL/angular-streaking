@@ -102,7 +102,7 @@ if __name__ == '__main__':
         N_G = int(sliders['XFEL']['peaks'].val)
         N_e = int(sliders['target']['photoelectrons'].val)
         E_ionize = sliders['target']['PE binding E / eV'].val  # eV
-        β = sliders['target']['β (1pk)'].val
+        β = sliders['target']['β'].val
 
         start = time.perf_counter()
 
@@ -117,7 +117,7 @@ if __name__ == '__main__':
             covs = covariance_from_correlation_2d(np.stack((sigma_t, sigma_E)), corr_list).T
             TEmap = MultivariateMapInterpolator.from_gauss_blob_list(np.stack((mu_t, mu_E)).T, covs, I_list)
 
-            pe = ionizer_Sauter(TEmap, E_ionize, N_e)
+            pe = ionizer_simple(β, TEmap, sliders['XFEL']['focal spot / m'].val, E_ionize, N_e)
             imdata = TEmap.map.T
             imextent = TEmap.domain.flatten()
         elif N_G == 2:
@@ -135,7 +135,8 @@ if __name__ == '__main__':
             covs = covariance_from_correlation_2d(np.stack((sigma_t, sigma_E)), corr_list).T
             TEmap = MultivariateMapInterpolator.from_gauss_blob_list(np.stack((mu_t, mu_E)).T, covs, I_list)
 
-            pe = ionizer_Sauter(TEmap, E_ionize, N_e)
+            pe = ionizer_simple(β, TEmap, sliders['XFEL']['focal spot / m'].val, E_ionize, N_e)
+            #pe = ionizer_Sauter(TEmap, E_ionize, N_e)
             imdata = TEmap.map.T
             imextent = TEmap.domain.flatten()
             imextent[[0, 1]] *= 1e15
@@ -302,7 +303,7 @@ if __name__ == '__main__':
         'target': {
             'photoelectrons':     (1e3,     5e5,   1,     1e5,    '%1d',   update_electrons),
             'PE binding E / eV':  (500,     1500,  None,  1150,   '%.0f',  update_electrons),
-            'β (1pk)':            (0,       2,     2,     2,      '%1d',   update_electrons),
+            'β':                  (-1,      2,     None,  2,      '%.2f',   update_electrons),
             'Auger ratio':        (0,       1,     None,  0,      None,    update_electrons),
             'Auger lifetime / s': (1e-15,   1e-14, None,  22e-16, None,    update_electrons),
             'Auger KE / eV':      (50,      1000,  None,  60,    '%.1f',   update_electrons),

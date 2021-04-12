@@ -1,35 +1,51 @@
 import numpy as np
 import scipy.constants as const
+from scipy.spatial.transform import Rotation
 from streaking.electrons import ClassicalElectrons
-from streaking.stats import rejection_sampling
-from streaking.conversions import spherical_to_cartesian
+from streaking.stats import rejection_sampling, rejection_sampling_spherical
+from streaking.conversions import spherical_to_cartesian, cartesian_to_spherical
 from numpy import pi as π
+from scipy.special import eval_legendre as P
 
 
-def diff_cross_section_dipole(φ, β):
-    return 1 + β * 1 / 2 * (3 * np.cos(φ) ** 2 - 1)
+def diff_cross_section_dipole(ϑ, φ, β):
+    return (1 + β * 1 / 2 * (3 * np.cos(ϑ) ** 2 - 1)) / 3
 
 
-def ionizer_simple(β, tEmean, tEcov, EB, xfel_spotsize, electrons):
+def diff_cross_section_1st_nondipole(ϑ, φ, β, Δβ, δ, ɣ, λ, µ, ν):
+    return (
+        1
+        + (β + Δβ) * P(2, np.cos(ϑ))
+        + (δ + ɣ * np.cos(ϑ) ** 2) * np.sin(ϑ) * np.cos(φ)
+        + λ * P(2, np.cos(ϑ) * np.cos(2 * φ))
+        + µ * np.cos(2 * φ)
+        + ν * (1 + np.cos(2 * φ) * P(4, np.cos(ϑ)))
+    ) / 3  # TODO: Verify whether 3 is the highest this can be
+
+
+def ionizer_simple(β, TEmap, xfel_spotsize, EB, electrons):
     """
     Generate randomly distributed photoelectrons
     """
-    t0, E = np.random.multivariate_normal(tEmean, tEcov, electrons).T
+    # t0, E = np.random.multivariate_normal(tEmean, tEcov, electrons).T
+    t0, E = rejection_sampling(TEmap.eval, TEmap.domain, electrons)
     E -= EB
     E *= const.e  # in Joules
 
-    if int(β) == 2:
-        ϑ, φ = rejection_sampling(
-            diff_cross_section_Sauter_lowEnergy, ((-π, π), (0, π)), electrons
-        )
-        px, py, pz = spherical_to_cartesian(1, ϑ, φ)
-    else:
-        # ClassicalElectrons normalizes this
-        px, py, pz = np.random.normal(size=(3, electrons))
+    px, py, pz = rejection_sampling_spherical(
+        diff_cross_section_dipole, electrons, params=(β,)
+    )
+
+    # px, py, pz = rejection_sampling_spherical(
+    #     diff_cross_section_1st_nondipole, electrons, params=(1.9695, -0.01830, 0, 1.6406, 0.02711, 0.03790, -0.06501)#(1.9995, -0.00025, 0, 0.1982, 0.0004, 0.00056, -0.00097)
+    # )
+
+    # Transform coordinates, as in the cross sections, z is along the polarization vector.
+    px, py, pz = pz, py, -px
 
     r = np.random.multivariate_normal(
         (0, 0, 0), np.diag((xfel_spotsize, xfel_spotsize, 1e-15)) ** 2, electrons
-    )  #
+    )
     return ClassicalElectrons(r, np.vstack((px, py, pz)).T, E, t0)
 
 
@@ -68,7 +84,7 @@ def ionizer_Sauter(TEmap, E_ionize, N_e):
     # mean_gamma = np.mean(1 + Ekin / (const.m_e * const.c**2))
     # generate emission angles from Sauter cross section
     theta, phi = rejection_sampling(
-        diff_cross_section_Sauter_lowEnergy, ((-π, π), (0, π)), N_e
+        diff_cross_section_Sauter_lowEnergy, ((0, π), (-π, π)), N_e
     )
     px, py, pz = spherical_to_cartesian(1, theta, phi)
     r = np.zeros((N_e, 3)) + 1e-24
