@@ -47,7 +47,9 @@ def rejection_sampling(pdf, parameter_range, samples, oversampling=2, params=())
     while sum_rejected > osamples - samples:
         rand[rejected] = np.random.uniform(*parameter_range.T, (sum_rejected, ndim))
         rejection[rejected] = np.random.rand(sum_rejected)
-        rejected[rejected] = rejection[rejected] > np.squeeze(pdf(rand[rejected], *params))
+        rejected[rejected] = rejection[rejected] > np.squeeze(
+            pdf(rand[rejected], *params)
+        )
         sum_rejected = np.sum(rejected)
     rand = rand[~rejected][:samples]
     return np.squeeze(rand.T)
