@@ -42,10 +42,10 @@ def constant_polar_angle_ring(
     polar_center,
     polar_acceptance,
     azimuth_bins,
+    radius,
     variable,
     variable_bins,
-    variable_quantile,
-    radius,
+    variable_quantile=None,
     origin=(0, 0, 0),
     rotation=None,
 ):

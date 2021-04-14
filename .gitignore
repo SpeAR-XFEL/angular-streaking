@@ -131,3 +131,6 @@ dmypy.json
 .vscode/settings.json
 %SystemDrive%
 .idea
+
+# Currently not needed
+poetry.lock

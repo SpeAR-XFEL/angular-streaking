@@ -1,5 +1,5 @@
 from streaking.gaussian_beam import SimpleGaussianBeam
-from streaking.ionization import ionizer_Sauter, ionizer_simple
+from streaking.ionization import ionizer_simple
 from streaking.conversions import ellipticity_to_jones_vector
 from streaking.streak import dumb_streaker
 from streaking.multivariate_map_interpolator import MultivariateMapInterpolator
@@ -49,9 +49,10 @@ def simulate(config):
         covs = covariance_from_correlation_2d(np.stack((sigma_t, sigma_E)), corr_list).T
         TEmap = MultivariateMapInterpolator.from_gauss_blob_list(np.stack((mu_t, mu_E)).T, covs, I_list)
 
-        pe = ionizer_Sauter(TEmap, binding_energy, number_of_electrons)
-    elif pconf['xfel pulse generator'] == 'gaussian':
-        pe = ionizer_simple(2, (0, 1e3), ((1e-15, 0), (0, 5)), 870, 1e-6, number_of_electrons)
+        pe = ionizer_simple(pconf['target']['beta'], TEmap, pconf['xfel']['focal size'], binding_energy, number_of_electrons)
+        # ionizer_simple(, , )
+    # elif pconf['xfel pulse generator'] == 'gaussian':
+    #    pe = ionizer_simple(2, (0, 1e3), ((1e-15, 0), (0, 5)), 870, 1e-6, number_of_electrons)
     else:
         raise ValueError(f'Unsupported XFEL pulse generator: {pconf["xfel pulse generator"]}')
 
@@ -70,7 +71,7 @@ def simulate(config):
 
     t_bins = np.linspace(*tb) if isinstance(tb, list) else tb
     streaked_pe, kick = dumb_streaker(pe, streaking_beam, return_A_kick=True)
-    hist, x, y = constant_polar_angle_ring(streaked_pe, pconf['detector']['theta center'], pconf['detector']['theta acceptance'], pconf['detector']['phi bins'], pconf['detector']['variable'], energy_bins, None, 0.25, None, None)
+    hist, x, y = constant_polar_angle_ring(streaked_pe, pconf['detector']['theta center'], pconf['detector']['theta acceptance'], pconf['detector']['phi bins'], pconf['detector']['radius'], pconf['detector']['variable'], energy_bins)
 
     spec, _, _ = np.histogram2d(pe.t0, pe.Ekin() / const.e, bins=(t_bins, energy_bins))
     timedist = np.sum(spec, axis=1)
@@ -99,7 +100,7 @@ if __name__ == '__main__':
     c = f.create_dataset('kick', (s,), chunks=(chunk,), **h5opt)
     d = f.create_dataset('time_distribution', (s, t), chunks=(chunk, t), **h5opt)
 
-    for i, j, k, l in tqdm(zip(a.iter_chunks(), b.iter_chunks(), c.iter_chunks(), d.iter_chunks()), total=int(np.ceil(s/chunk)), desc='Total'):
+    for i, j, k, l in tqdm(zip(a.iter_chunks(), b.iter_chunks(), c.iter_chunks(), d.iter_chunks()), total=int(np.ceil(s / chunk)), desc='Total'):
         results = p_map(simulate, [sample_config(config) for i in range(i[0].stop - i[0].start)], smoothing=0.05, leave=False, desc='Chunk', num_cpus=20)
         # results = map(simulate, [sample_config(config) for i in range(i[0].stop - i[0].start)])
         a[i], b[j], c[k], d[l] = list(map(list, zip(*results)))

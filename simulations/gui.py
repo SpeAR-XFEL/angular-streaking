@@ -1,17 +1,17 @@
 from streaking.gaussian_beam import SimpleGaussianBeam
-from streaking.ionization import ionizer_simple, ionizer_Sauter, naive_auger_generator
+from streaking.ionization import ionizer_simple, naive_auger_generator
 from streaking.conversions import cartesian_to_spherical, spherical_to_cartesian, ellipticity_to_jones_vector
 from streaking.streak import classical_lorentz_streaker, dumb_streaker
 from streaking.multivariate_map_interpolator import MultivariateMapInterpolator
 from streaking.stats import covariance_from_correlation_2d
 from streaking.detectors import constant_polar_angle_ring, energy_integrated_4pi
 import numpy as np
-import scipy.stats
 import scipy.constants as const
 from scipy.spatial.transform import Rotation
 from matplotlib.widgets import Slider
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
+from matplotlib.patches import StepPatch
 import matplotlib
 import time
 from numpy import pi as π
@@ -25,23 +25,23 @@ if __name__ == '__main__':
     spe = None
     # Fraction of cut-off values in otherwise unbounded histograms 
     discard = 0.01
-    dpi = 100
+    dpi = 150
     fig = plt.figure(constrained_layout=False, figsize=(1920/dpi, 1080/dpi), dpi=dpi)
-    gs = gridspec.GridSpec(2, 2, width_ratios=[1, 8], height_ratios=[1, 6], figure=fig)
+    gs = gridspec.GridSpec(2, 2, width_ratios=[1, 8], height_ratios=[1, 6], figure=fig, hspace=0.15, left=0.06, right=0.99, top=0.95, bottom=0.05)
 
     # time-energy map
     gshdr = gs[0, 1].subgridspec(1, 2, wspace=0.1)
     ax0 = fig.add_subplot(gshdr[0, 0])
     ax0.set_xlabel('$t$ / fs')
     ax0.set_ylabel(r'$h\nu$ / eV')
-    teim = ax0.imshow([[1], [1]], origin='lower', aspect='auto')
+    teim = ax0.imshow([[1], [1]], origin='lower', aspect='auto', interpolation='none')
     ax0.set_title('Photon distribution')
 
     # kinetic energy histogram
     axke = fig.add_subplot(gshdr[0, 1])
     axke.set_xlabel('$t$ / fs')
     axke.set_ylabel(r'$e^-$ KE / eV')
-    keim = axke.imshow([[1], [1]], origin='lower', aspect='auto')
+    keim = axke.imshow([[1], [1]], origin='lower', aspect='auto', interpolation='none')
     axke.set_title('Photoelectron distribution')
 
     subgs12 = gs[1, 1].subgridspec(1, 2, wspace=0.1)
@@ -59,6 +59,7 @@ if __name__ == '__main__':
     ax1.set_title('Unstreaked')
     ax2.set_title('Streaked')
     for ax in (ax1, ax2):
+        ax.legend((), (), title='ring detector', loc='upper left', labelspacing=0)
         ax.set_ylabel(r'$E_\mathrm{kin}$ / eV')
         ax.tick_params(bottom=False, labelbottom=False)
 
@@ -78,6 +79,7 @@ if __name__ == '__main__':
         ax.set_ylabel(r'$\vartheta$')
         ax.set_xlim(0, 2 * np.pi)
         ax.set_ylim(0, np.pi)
+        ax.legend((), (), title=r'4$\,$π detector', loc='upper left', labelspacing=0)
 
     # marginal distributions
     axmarg1x = fig.add_subplot(subgs1[1, 0], sharex=ax1)
@@ -86,14 +88,14 @@ if __name__ == '__main__':
     axmarg2y = fig.add_subplot(subgs2[0, 1], sharey=ax2)
     axmarg3y = fig.add_subplot(subgs1[2, 1], sharey=ax3)
     axmarg4y = fig.add_subplot(subgs2[2, 1], sharey=ax4)
-    st1, = axmarg1x.step([0,], [0,], where='post')
-    st2, = axmarg2x.step([0,], [0,], where='post', color='C0')
-    st3, = axmarg2x.step([0,], [0,], where='post', color='C1')
-    st7, = axmarg3y.plot((0,), (0,), drawstyle='steps-pre', color='C0')
-    st9, = axmarg4y.plot((0,), (0,), drawstyle='steps-pre', color='C0')
-    st8, = axmarg4y.plot((0,), (0,), drawstyle='steps-pre', color='C1')
-    st5, = axmarg1y.plot([1], [1], color='C0', drawstyle='steps-pre')
-    st6, = axmarg2y.plot([1], [1], color='C0', drawstyle='steps-pre')
+    st1 = axmarg1x.add_patch(StepPatch((0,), (0, 1), ec='C0', fc='#1f77b444'))
+    st2 = axmarg2x.add_patch(StepPatch((0,), (0, 1), ec='C0', fc='#1f77b444'))
+    st3 = axmarg2x.add_patch(StepPatch((0,), (0, 1), ec='C1', fc='#ff7f0e44'))
+    st7 = axmarg3y.add_patch(StepPatch((0,), (0, 1), ec='C0', fc='#1f77b444', orientation='horizontal'))
+    st9 = axmarg4y.add_patch(StepPatch((0,), (0, 1), ec='C0', fc='#1f77b444', orientation='horizontal'))
+    st8 = axmarg4y.add_patch(StepPatch((0,), (0, 1), ec='C1', fc='#ff7f0e44', orientation='horizontal'))
+    st5 = axmarg1y.add_patch(StepPatch((0,), (0, 1), ec='C0', fc='#1f77b444', orientation='horizontal'))
+    st6 = axmarg2y.add_patch(StepPatch((0,), (0, 1), ec='C0', fc='#1f77b444', orientation='horizontal'))
     for ax in (axmarg2x, axmarg1x, axmarg1y, axmarg2y, axmarg3y, axmarg4y):
         ax.tick_params(bottom=False, labelbottom=False, left=False, labelleft=False)
 
@@ -143,20 +145,20 @@ if __name__ == '__main__':
         else:
             dur = sliders['XFEL']['width (1pk) / s'].val
             sigE = sliders['XFEL']['σ(E) (1pk) / eV'].val
-            tEmeans = (0, sliders['XFEL']['µ(E) (1pk) / eV'].val)
+            muE = sliders['XFEL']['µ(E) (1pk) / eV'].val
             chirp = sliders['XFEL']['chirp (1pk)'].val
-            # Please dont ask about this fs bullshit.. just for display purposes
-            tEcov = np.array(((dur**2, chirp * dur * sigE), (chirp * dur * sigE, sigE**2)))
-            offdiag = chirp * dur * 1e15 * sigE
-            tEcovfs = np.array((((dur*1e15)**2, offdiag), (offdiag, sigE**2))).T
-            pe = ionizer_simple(β, tEmeans, tEcov, E_ionize, sliders['XFEL']['focal spot / m'].val, N_e)
-            sigma_range = 4
-            rangeI = (-sigma_range*dur, sigma_range*dur)
-            rangeIfs = (-sigma_range*dur*1e15, sigma_range*dur*1e15)
-            rangeE = (-sigma_range*sigE + tEmeans[1], sigma_range*sigE + tEmeans[1])
-            A, B = np.meshgrid(np.linspace(*rangeIfs, 300), np.linspace(*rangeE, 300))
-            imdata = scipy.stats.multivariate_normal(tEmeans, tEcovfs).pdf(np.dstack((A, B)))
-            imextent = (*rangeIfs, *rangeE)
+            sigma_t = (dur,)
+            sigma_E = (sigE,)
+            corr_list = (chirp,)
+            I_list = (1,)
+
+            covs = covariance_from_correlation_2d(np.stack((sigma_t, sigma_E)), corr_list).T
+            TEmap = MultivariateMapInterpolator.from_gauss_blob_list(np.array(((0, muE),)), covs, I_list)
+
+            pe = ionizer_simple(β, TEmap, sliders['XFEL']['focal spot / m'].val, E_ionize, N_e)
+            imdata = TEmap.map.T
+            imextent = TEmap.domain.flatten()
+            imextent[[0, 1]] *= 1e15
 
         auger_ratio = sliders['target']['Auger ratio'].val
         if auger_ratio > 0:
@@ -168,7 +170,7 @@ if __name__ == '__main__':
 
         diff = time.perf_counter() - start
         per = diff/len(pe)
-        print(f'Generating electrons took {diff:.1f} s, {per*1e6:.1f} µs / e-. ', end='')
+        stats_text2.set_text(f'Sampling took {diff*1e3:.1f} ms, {per*1e9:.0f} ns / e$^-$')
 
         teim.set_data(imdata)
         teim.set_extent(imextent)
@@ -214,7 +216,7 @@ if __name__ == '__main__':
         spe = dumb_streaker(pe, beam)
         diff = time.perf_counter()-start
         per = diff/len(spe)
-        print(f'Streaking took {diff:.1f} s, {per*1e6:.1f} µs / e-')
+        stats_text1.set_text(f'Streaking took {diff*1e3:.1f} ms, {per*1e9:.0f} ns / e$^-$')
 
         return update_detector(None)
 
@@ -234,8 +236,8 @@ if __name__ == '__main__':
         thetadet_h = np.ones_like(phidet) * center + acc
         _, thetadet_l, phidet_l = cartesian_to_spherical(*r.apply(spherical_to_cartesian(1, thetadet_l, phidet).T).T)
         _, thetadet_h, phidet_h = cartesian_to_spherical(*r.apply(spherical_to_cartesian(1, thetadet_h, phidet).T).T)
-        phidet_l = (phidet_l + np.pi / 2 ) % (2 * np.pi)
-        phidet_h = (phidet_h + np.pi / 2 ) % (2 * np.pi)
+        phidet_l = (phidet_l + np.pi / 2) % (2 * np.pi)
+        phidet_h = (phidet_h + np.pi / 2) % (2 * np.pi)
         # Try to roll angles to obtain non-self-intersecting polygon...
         i = 0
         while(np.abs(np.diff(phidet_l)).max() > 100 * np.abs(np.diff(phidet_l)).mean() and i < len(phidet)):
@@ -251,8 +253,8 @@ if __name__ == '__main__':
         sp3.set_xy(xy)
         sp4.set_xy(xy)
 
-        data1, x1, y1 = constant_polar_angle_ring(pe, center, acc, phibincount, 'kinetic energy', 100, discard, 0.25, (0, 0, sliders['detector'][r'z offset / m'].val), r)
-        data2, x2, y2 = constant_polar_angle_ring(spe, center, acc, phibincount, 'kinetic energy', 100, discard, 0.25, (0, 0, sliders['detector'][r'z offset / m'].val), r)
+        data1, x1, y1 = constant_polar_angle_ring(pe, center, acc, phibincount, 0.25, 'kinetic energy', 100, discard, (0, 0, sliders['detector'][r'z offset / m'].val), r)
+        data2, x2, y2 = constant_polar_angle_ring(spe, center, acc, phibincount, 0.25, 'kinetic energy', 100, discard, (0, 0, sliders['detector'][r'z offset / m'].val), r)
 
         im1.set_data(data1.T)
         im2.set_data(data2.T)
@@ -270,32 +272,34 @@ if __name__ == '__main__':
         im3.autoscale()
         im4.autoscale()
 
-
-        marg1x = np.append(data1.T.sum(axis=0), 0)
-        marg2x = np.append(data2.T.sum(axis=0), 0)
-        marg1y = np.append(data1.T.sum(axis=1), 0)
-        marg2y = np.append(data2.T.sum(axis=1), 0)
-        marg3y = np.append(data3.sum(axis=0), 0)
-        marg4y = np.append(data4.sum(axis=0), 0)
-        st1.set_data(x1, marg1x)
-        st2.set_data(x1, marg1x)
-        st3.set_data(x2, marg2x)
+        marg1x = data1.T.sum(axis=0)
+        marg2x = data2.T.sum(axis=0)
+        marg1y = data1.T.sum(axis=1)
+        marg2y = data2.T.sum(axis=1)
+        marg3y = data3.sum(axis=0)
+        marg4y = data4.sum(axis=0)
+        st1.set_data(marg1x, x1)
+        st2.set_data(marg1x, x1)
+        st3.set_data(marg2x, x2)
         st5.set_data(marg1y, y1)
         st6.set_data(marg2y, y2)
         st7.set_data(marg3y, y3)
         st8.set_data(marg4y, y4)
         st9.set_data(marg3y, y3)
-        for i, ax in enumerate((axmarg3y, axmarg4y, axmarg1y, axmarg2y, axmarg1x, axmarg2x)):
-            ax.relim()
-            ax.autoscale_view(scaley=(i >= 4), scalex=(i < 4))
+        axmarg1x.set_ylim(np.max((marg1x.max(), marg2x.max())) * 1.05, 0)
+        axmarg1y.set_xlim(0, marg1y.max() * 1.05)
+        axmarg2y.set_xlim(0, marg2y.max() * 1.05)
+        axmarg3y.set_xlim(0, marg3y.max() * 1.05)
+        axmarg4y.set_xlim(0, np.max((marg3y.max(), marg4y.max())) * 1.05)
+
         return im1, im2, st1, st2, st3, st5, st6, st7, st8, st9
     # Sliders galore!
     sliders_spec = {
         'XFEL': {
             'peaks':              (1,       10,    1,     2,      '%1d',   update_electrons),
             'width (1pk) / s':    (1e-17,   15e-15,None,  8e-16,  None,    update_electrons),
-            'µ(E) (1pk) / eV':    (800,     2000,  None,  1200,   '%.0f',  update_electrons),
-            'σ(E) (1pk) / eV':    (0.1,     10,    None,  0.5,    '%.1f',  update_electrons),
+            'µ(E) (1pk) / eV':    (800,     6000,  None,  1200,   '%.0f',  update_electrons),
+            'σ(E) (1pk) / eV':    (0.1,     60,    None,  0.5,    '%.1f',  update_electrons),
             'chirp (1pk)':        (-0.999,  0.999, None,  0,      '%.1f',  update_electrons),
             'distance (2pk) / s': (0,       1e-14, None,  7e-15,  None,    update_electrons),
             'focal spot / m':     (1e-6,    1e-4,  None,  2e-5,   None,    update_electrons),
@@ -343,7 +347,13 @@ if __name__ == '__main__':
     #        Name                  min      max    step   start   fmt       update function
     }
 
-    gs_widgets = gs[:, 0].subgridspec(40, 1)
+    gs_widgets = gs[:, 0].subgridspec(41, 1)
+    stats_ax2 = fig.add_subplot(gs_widgets[39])
+    stats_ax2.axis('off')
+    stats_text2 = stats_ax2.text(0,0, "")
+    stats_ax1 = fig.add_subplot(gs_widgets[40])
+    stats_ax1.axis('off')
+    stats_text1 = stats_ax1.text(0,0, "")
     idx = 0
     sliders = {}
     for cat in sliders_spec.keys():
@@ -376,7 +386,7 @@ if __name__ == '__main__':
     update_electrons(None)
     im1.autoscale()
     im2.autoscale()
-    plt.tight_layout(pad=1)
+    #plt.tight_layout(pad=1)
 
     figManager = plt.get_current_fig_manager()
     figManager.window.move(0, 0)

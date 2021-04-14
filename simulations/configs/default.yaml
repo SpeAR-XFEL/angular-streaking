@@ -10,6 +10,8 @@ physical parameters:
         cep: 3.142  # rad
         ellipticity: 1  # 1: circular, 0: linear
         tilt: 0  # rad
+    xfel: 
+        focal size: 2e-5  # m
     xfel pulse generator: gaussian train
     xfel pulse generator settings:
             number of peaks: 10
@@ -26,12 +28,14 @@ physical parameters:
             intensity mean: 10
             intensity std: 1
     detector:
-        phi bins: 16
+        radius: 0.25  # m
+        phi bins: 16  # e.g. number of tofs
         energy bins: [0, 200, 201]  # eV
         theta center: 1.5708  # rad
         theta acceptance: 0.8  # rad
         variable: kinetic energy  # kinetic energy or momentum
     target:
+        beta: 2
         number of electrons: 200000
         binding energy: 870.2  # eV
 other parameters:
