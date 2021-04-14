@@ -25,9 +25,9 @@ if __name__ == '__main__':
     spe = None
     # Fraction of cut-off values in otherwise unbounded histograms 
     discard = 0.01
-    dpi = 150
+    dpi = 75
     fig = plt.figure(constrained_layout=False, figsize=(1920/dpi, 1080/dpi), dpi=dpi)
-    gs = gridspec.GridSpec(2, 2, width_ratios=[1, 8], height_ratios=[1, 6], figure=fig, hspace=0.15, left=0.06, right=0.99, top=0.95, bottom=0.05)
+    gs = gridspec.GridSpec(2, 2, width_ratios=[1, 8], height_ratios=[1, 6], figure=fig, hspace=0.15, left=0.08, right=0.99, top=0.95, bottom=0.05)
 
     # time-energy map
     gshdr = gs[0, 1].subgridspec(1, 2, wspace=0.1)
@@ -54,8 +54,8 @@ if __name__ == '__main__':
     ax1 = fig.add_subplot(subgs1[0, 0])
     ax2 = fig.add_subplot(subgs2[0, 0])
     zerodata = np.zeros((1, 1))
-    im1 = ax1.imshow(zerodata, origin='lower', aspect='auto')
-    im2 = ax2.imshow(zerodata, origin='lower', aspect='auto')
+    im1 = ax1.imshow(zerodata, origin='lower', aspect='auto', interpolation='none')
+    im2 = ax2.imshow(zerodata, origin='lower', aspect='auto', interpolation='none')
     ax1.set_title('Unstreaked')
     ax2.set_title('Streaked')
     for ax in (ax1, ax2):
