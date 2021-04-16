@@ -25,9 +25,9 @@ if __name__ == '__main__':
     spe = None
     # Fraction of cut-off values in otherwise unbounded histograms 
     discard = 0.01
-    dpi = 75
+    dpi = 150
     fig = plt.figure(constrained_layout=False, figsize=(1920/dpi, 1080/dpi), dpi=dpi)
-    gs = gridspec.GridSpec(2, 2, width_ratios=[1, 8], height_ratios=[1, 6], figure=fig, hspace=0.15, left=0.08, right=0.99, top=0.95, bottom=0.05)
+    gs = gridspec.GridSpec(2, 2, width_ratios=[1, 8], height_ratios=[1, 6], figure=fig, hspace=0.15, left=0.07, right=0.99, top=0.95, bottom=0.05)
 
     # time-energy map
     gshdr = gs[0, 1].subgridspec(1, 2, wspace=0.1)
@@ -79,7 +79,8 @@ if __name__ == '__main__':
         ax.set_ylabel(r'$\vartheta$')
         ax.set_xlim(0, 2 * np.pi)
         ax.set_ylim(0, np.pi)
-        ax.legend((), (), title=r'4$\,$π detector', loc='upper left', labelspacing=0)
+        legend = ax.legend((sp3,), ('ring det. acceptance',), title=r'4$\,$π detector', loc='upper left')
+        legend._legend_box.align = "left"
 
     # marginal distributions
     axmarg1x = fig.add_subplot(subgs1[1, 0], sharex=ax1)
