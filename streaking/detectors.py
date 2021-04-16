@@ -45,7 +45,7 @@ def constant_polar_angle_ring(
     radius,
     variable,
     variable_bins,
-    variable_quantile=None,
+    variable_quantile=0.01,
     origin=(0, 0, 0),
     rotation=None,
 ):

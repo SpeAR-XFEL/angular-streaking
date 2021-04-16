@@ -1,13 +1,13 @@
 from streaking.gaussian_beam import SimpleGaussianBeam
 from streaking.ionization import ionizer_simple
-from streaking.conversions import cartesian_to_spherical
-from streaking.streak import classical_lorentz_streaker
+from streaking.streak import dumb_streaker
+from streaking.detectors import constant_polar_angle_ring
+from streaking.multivariate_map_interpolator import MultivariateMapInterpolator
 import numpy as np
-import scipy.constants as const
 import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
-    number_of_electrons = 1000
+    number_of_electrons = 200000
     binding_energy = 870.2  # eV
     β = 2
     xfel_duration = 1e-15  # s
@@ -17,36 +17,41 @@ if __name__ == "__main__":
 
     xfel_time_energy_means = (0, xfel_energy)
     xfel_time_energy_covariance = np.diag((xfel_duration, xfel_energy_std)) ** 2
+
+    TEmap = MultivariateMapInterpolator.from_gauss_blob_list(
+        (xfel_time_energy_means,),
+        (xfel_time_energy_covariance,),
+        (1,)
+    )
+
     pe = ionizer_simple(  # pe: photoelectrons
         β,
-        xfel_time_energy_means,
-        xfel_time_energy_covariance,
-        binding_energy,
+        TEmap,
         xfel_focal_spot,
+        binding_energy,
         number_of_electrons,
     )
 
     streaking_beam = SimpleGaussianBeam(
-        focal_size=(500e-6 / 2.3548, 500e-6 / 2.3548),
+        focal_size=(500e-6, 500e-6),
         envelope_offset=0,
-        cep=np.pi/3,
+        cep=np.pi / 3,
         wavelength=10e-6,
         energy=30e-6,
         duration=300e-15)
-    streaked_pe = classical_lorentz_streaker(pe, streaking_beam, (0, 1e-12), 1e-14)
-    r, phi, theta = cartesian_to_spherical(*pe.p.T)
-    sr, sphi, stheta = cartesian_to_spherical(*streaked_pe.p.T)
 
-    # The simple assumption here is that the electrons are still pretty much in the origin,
-    # meaning that the detector they end up is just determined by their current flight angle
+    streaked_pe = dumb_streaker(pe, streaking_beam)
+
+    histogram, bins_phi, bins_E = constant_polar_angle_ring(pe, np.pi / 2, 0.5, 64, 0.25, 'kinetic energy', 200)
+    histogram_s, bins_phi_s, bins_E_s = constant_polar_angle_ring(streaked_pe, np.pi / 2, 0.5, 64, 0.25, 'kinetic energy', 200)
 
     plt.figure(figsize=(10, 5))
     plt.subplot(121)
-    plt.hist2d((theta + np.pi / 2) % (2 * np.pi), pe.Ekin() / const.e, bins=64)
+    plt.imshow(histogram.T, aspect='auto', origin='lower', interpolation='none')
     plt.xlabel(r"$\varphi$")
     plt.ylabel(r"$E_\mathrm{kin}$ / eV")
     plt.subplot(122)
-    plt.hist2d((stheta + np.pi / 2) % (2 * np.pi), streaked_pe.Ekin() / const.e, bins=64)
+    plt.imshow(histogram_s.T, aspect='auto', origin='lower', interpolation='none')
     plt.xlabel(r"$\varphi$")
     plt.ylabel(r"$E_\mathrm{kin}$ / eV")
     plt.tight_layout(pad=0.5)
