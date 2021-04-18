@@ -1,6 +1,6 @@
 # Angular streaking simulation framework
 
-Prerequisites: [Poetry](https://python-poetry.org/docs/)
+Prerequisites: Git, [Poetry](https://python-poetry.org/docs/)
 
 First, clone the repository (go to the directory you want the project to be in):
 
