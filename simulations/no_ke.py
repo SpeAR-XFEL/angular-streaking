@@ -1,16 +1,18 @@
 from streaking.gaussian_beam import SimpleGaussianBeam
-from streaking.ionization import ionizer_simple, ionizer_Sauter
+from streaking.ionization import ionizer_simple
 from streaking.conversions import cartesian_to_spherical
-from streaking.streak import classical_lorentz_streaker
+from streaking.streak import dumb_streaker
 from streaking.multivariate_map_interpolator import MultivariateMapInterpolator
 from streaking.stats import covariance_from_correlation_2d
+from streaking.detectors import constant_polar_angle_ring
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from p_tqdm import p_map
 
 
-def streaking_sim(xfel_duration, cep, phibins, peaks):
-    number_of_electrons = 25000
+def streaking_sim(xfel_duration, cep, phibins, peaks, energy):
+    number_of_electrons = 200000
     binding_energy = 870.2  # eV
     β = 2
     xfel_energy = 930  # eV
@@ -46,50 +48,48 @@ def streaking_sim(xfel_duration, cep, phibins, peaks):
         covs = covariance_from_correlation_2d(np.stack((sigma_t, sigma_E)), corr_list).T
         TEmap = MultivariateMapInterpolator.from_gauss_blob_list(np.stack((mu_t, mu_E)).T, covs, I_list)
 
-        pe = ionizer_Sauter(TEmap, binding_energy, number_of_electrons)
+        pe = ionizer_simple(2, TEmap, 1e-5, binding_energy, number_of_electrons)
     else:
         raise ValueError("Unsupported peak count")
 
     streaking_beam = SimpleGaussianBeam(
-        focal_size=(1e-4, 1e-4),
+        focal_size=(5e-4, 5e-4),
         envelope_offset=0,
         cep=cep,
         wavelength=10e-6,
-        energy=200e-6,
+        energy=energy,
         duration=300e-15)
-    streaked_pe = classical_lorentz_streaker(pe, streaking_beam, (0, 1e-12), 1e-14, processes=21)
-    sr, stheta, sphi = cartesian_to_spherical(*streaked_pe.p.T)
-    mask = np.abs(stheta - theta_center) < theta_acceptance
-    sphi = (sphi[mask] + np.pi / 2) % (2 * np.pi)
-    return np.histogram(sphi, bins=phibins)[0]
+    streaked_pe = dumb_streaker(pe, streaking_beam)
+    hist, x, y = constant_polar_angle_ring(streaked_pe, np.pi/2, 0.2, phibins, 0.25, 'kinetic energy', 1, 0.0)
+
+    return hist[:, 0]
 
 
 def make_image_cep(cep):
-    phibins = np.linspace(0, 2 * np.pi, 64 + 1)
     durations = np.linspace(0e-15, 15e-15, 40)
-    hist = [streaking_sim(duration, cep, phibins, 2) for duration in tqdm(durations)]
-    plt.imshow(hist, origin='lower', aspect='auto', extent=(phibins[0], phibins[-1], 1e15 * durations[0], 1e15 * durations[-1]))
+    hist = [streaking_sim(duration, cep, 64, 2) for duration in tqdm(durations)]
+    plt.imshow(hist, origin='lower', aspect='auto', extent=(0, 2 * np.pi, 1e15 * durations[0], 1e15 * durations[-1]))
     plt.title(f'Angular distribution of streaked electrons (energy integrated)\n at 200µJ & 100µm focus, CEP = {cep:.2f}, double pulses (1fs each)')
     plt.xlabel(r'$\varphi$')
     plt.ylabel(r'XFEL double pulse separation / fs')
     plt.tight_layout(pad=0.5)
-    plt.savefig(f'simulations/build/no_ke_cep_2pk_forward_200uJ/{cep:.2f}.png', dpi=400)
+    plt.savefig(f'simulations/build/no_ke_new_2021_04_18/{cep:.2f}.png', dpi=400)
     plt.close()
 
 
-def make_image_dur(dur):
-    phibins = np.linspace(0, 2 * np.pi, 64 + 1)
-    ceps = np.linspace(0, 2 * np.pi, 40)
-    hist = [streaking_sim(dur, cep, phibins, 2) for cep in tqdm(ceps)]
-    plt.imshow(hist, origin='lower', aspect='auto', extent=(phibins[0], phibins[-1], ceps[0], ceps[-1]))
-    plt.title(f'Angular distribution of streaked electrons (energy integrated)\n at 200µJ & 100µm focus, double pulses (1fs each), separation {1e15*dur:.2f} fs')
+def make_image_energy(energy):
+    durations = np.linspace(0e-15, 15e-15, 40)
+    hist = p_map(lambda duration: streaking_sim(duration, np.pi, 64, 2, energy), durations)
+    plt.figure(figsize=(15, 5))
+    plt.imshow(hist, origin='lower', aspect='auto', extent=(0, 2 * np.pi, 1e15 * durations[0], 1e15 * durations[-1]))
+    plt.title(f'Angular distribution of streaked electrons from 1$\,$fs double pulses \n at {1e6*energy:.0f}$\,$µJ streaking pulse energy & 500$\,$µm focus')
     plt.xlabel(r'$\varphi$')
-    plt.ylabel(r'CEP')
+    plt.ylabel(r'XFEL double pulse separation / fs')
     plt.tight_layout(pad=0.5)
-    plt.savefig(f'simulations/build/no_ke_dur_2pk_forward_200uJ/{dur*1e15:.2f}.png', dpi=400)
+    plt.savefig(f'simulations/build/no_ke_new_2021_04_18/{1e6*energy:.0f}.png', dpi=400)
     plt.close()
 
 
 if __name__ == "__main__":
-    [make_image_cep(cep) for cep in tqdm(np.linspace(0, 2 * np.pi, 40))]
+    [make_image_energy(energy) for energy in tqdm((30e-6,))]
     #[make_image_dur(dur) for dur in tqdm(np.linspace(10e-15, 20e-15, 20))]

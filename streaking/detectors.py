@@ -65,7 +65,7 @@ def constant_polar_angle_ring(
     if np.ndim(variable_bins) == 0:
         variable_bins = np.linspace(
             *np.quantile(v, (variable_quantile / 2, 1 - variable_quantile / 2)),
-            variable_bins,
+            variable_bins + 1,
         )
 
     return np.histogram2d(
