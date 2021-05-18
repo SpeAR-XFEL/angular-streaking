@@ -115,12 +115,12 @@ if __name__ == '__main__':
         start = time.perf_counter()
 
         if N_G > 2:
-            mu_t = np.random.normal(0, 1.5e-15, N_G)  # s
-            mu_E = np.random.normal(1200, 2, N_G)  # eV
-            sigma_t = np.abs(np.random.normal(0.4e-15, 0.2e-15, N_G))
-            sigma_E = np.abs(np.random.normal(2, 0.5, N_G))
+            mu_t = np.random.normal(0, 5e-15, N_G)  # s
+            mu_E = np.random.normal(940, 1, N_G)  # eV
+            sigma_t = np.abs(np.random.normal(1e-15, 0.2e-15, N_G))
+            sigma_E = np.abs(np.random.normal(2, 0.1, N_G))
             corr_list = np.random.normal(0, 0, N_G)
-            I_list = np.abs(np.random.normal(10, 0.1, N_G))
+            I_list = np.abs(np.random.normal(1, 0.05, N_G))
 
             covs = covariance_from_correlation_2d(np.stack((sigma_t, sigma_E)), corr_list).T
             TEmap = MultivariateMapInterpolator.from_gauss_blob_list(np.stack((mu_t, mu_E)).T, covs, I_list)
@@ -128,11 +128,12 @@ if __name__ == '__main__':
             pe = ionizer_simple(β, TEmap, sliders['XFEL']['focal spot / m'].val, E_ionize, N_e)
             imdata = TEmap.map.T
             imextent = TEmap.domain.flatten()
+            imextent[[0, 1]] *= 1e15
         elif N_G == 2:
             twopk_dist = sliders['XFEL']['distance (2pk) / s'].val
-            dur = sliders['XFEL']['width (1pk) / s'].val
-            sigE = sliders['XFEL']['σ(E) (1pk) / eV'].val
-            muE = sliders['XFEL']['µ(E) (1pk) / eV'].val
+            dur = sliders['XFEL']['width (1-2pk) / s'].val
+            sigE = sliders['XFEL']['σ(E) (1-2pk) / eV'].val
+            muE = sliders['XFEL']['µ(E) (1-2pk) / eV'].val
             mu_t = (-twopk_dist / 2, twopk_dist / 2)
             mu_E = (muE, muE)  # eV
             sigma_t = (dur, dur)
@@ -150,9 +151,9 @@ if __name__ == '__main__':
             imextent = TEmap.domain.flatten()
             imextent[[0, 1]] *= 1e15
         else:
-            dur = sliders['XFEL']['width (1pk) / s'].val
-            sigE = sliders['XFEL']['σ(E) (1pk) / eV'].val
-            muE = sliders['XFEL']['µ(E) (1pk) / eV'].val
+            dur = sliders['XFEL']['width (1-2pk) / s'].val
+            sigE = sliders['XFEL']['σ(E) (1-2pk) / eV'].val
+            muE = sliders['XFEL']['µ(E) (1-2pk) / eV'].val
             chirp = sliders['XFEL']['chirp (1pk)'].val
             sigma_t = (dur,)
             sigma_E = (sigE,)
@@ -305,9 +306,9 @@ if __name__ == '__main__':
         'XFEL': {
             'pulse energy / J':   (1e-4,    1e-3,  None,  1e-4,   None,    update_electrons),
             'peaks':              (1,       10,    1,     2,      '%1d',   update_electrons),
-            'width (1pk) / s':    (1e-17,   15e-15,None,  8e-16,  None,    update_electrons),
-            'µ(E) (1pk) / eV':    (800,     6000,  None,  1200,   '%.0f',  update_electrons),
-            'σ(E) (1pk) / eV':    (0.1,     60,    None,  0.5,    '%.1f',  update_electrons),
+            'width (1-2pk) / s':  (1e-17,   15e-15,None,  8e-16,  None,    update_electrons),
+            'µ(E) (1-2pk) / eV':  (800,     6000,  None,  1200,   '%.0f',  update_electrons),
+            'σ(E) (1-2pk) / eV':  (0.1,     60,    None,  0.5,    '%.1f',  update_electrons),
             'chirp (1pk)':        (-0.999,  0.999, None,  0,      '%.1f',  update_electrons),
             'distance (2pk) / s': (0,       1e-14, None,  7e-15,  None,    update_electrons),
             'focal spot / m':     (1e-6,    1e-4,  None,  2e-5,   None,    update_electrons),
@@ -340,10 +341,10 @@ if __name__ == '__main__':
         #     'delay / s':          (-1e-12,  1e-12, None,  0,      None,    update_streaking),
         #     'energy / J':         (0,       1e-3,  None,  0,      None,    update_streaking),
         # },
-        'simulation': {
-            'time / s':           (0,       1e-11, None,  1e-12,  None,    update_streaking),
-            'stepsize / s':       (5e-15,   2e-14, None,  1e-14,  None,    update_streaking),
-        },
+        # 'simulation': {
+        #     'time / s':           (0,       1e-11, None,  1e-12,  None,    update_streaking),
+        #     'stepsize / s':       (5e-15,   2e-14, None,  1e-14,  None,    update_streaking),
+        # },
         'detector': {
             r'ϑ accept. / rad':   (0.01,    np.pi,  None,  0.25,  '%1.2f', update_detector),
             r'ϑ center / rad':    (0,       np.pi,  None,  np.pi/2,'%1.2f',update_detector),

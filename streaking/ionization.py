@@ -48,8 +48,10 @@ def ionizer_simple(β, TEmap, xfel_spotsize, EB, electrons):
     px, py, pz = -pz, py, px
 
     r = np.random.multivariate_normal(
-        (0, 0, 0), np.diag((xfel_spotsize, xfel_spotsize, 1e-15)) ** 2, electrons
+        (0, 0, 0), np.diag((xfel_spotsize, xfel_spotsize, 1e-2)) ** 2, electrons
     )
+
+    t0 += r[:, 2] / const.c
     return ClassicalElectrons(r, np.vstack((px, py, pz)).T, E, t0)
 
 
