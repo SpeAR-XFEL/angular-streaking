@@ -71,3 +71,7 @@ class MultivariateMapInterpolator:
         idx = (points - self.domain[:, 0]) / (self.domain[:, 1] - self.domain[:, 0]) * self.resolution
         idx = idx.astype(int).T
         return self.map[tuple(idx)]
+
+    def get_centroid(self):
+        dim = self.grid.shape[-1]
+        return np.average(self.grid, weights=np.tile(self.map[:, :, None], dim), axis=tuple(range(dim)))

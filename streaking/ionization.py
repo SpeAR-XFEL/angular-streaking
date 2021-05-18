@@ -20,6 +20,12 @@ def diff_cross_section_1st_nondipole(ϑ, φ, β, Δβ, δ, ɣ, λ, µ, ν):
         + ν * (1 + np.cos(2 * φ) * P(4, np.cos(ϑ)))
     ) / 3  # TODO: Verify whether 3 is the highest this can be
 
+def ionizer_total_cs(initial_state, TEMap, xfelE, xfelSpot, targetLen, targetDen):
+    meanT, meanE = TEMap.get_centroid()
+    photons = xfelE / (meanE * const.e)
+    cross_section = 0.23e6 * 1e-28
+    pe_count = int(photons * cross_section * targetDen * 1e6 * targetLen)
+    return ionizer_simple(2, TEMap, xfelSpot, 870, pe_count)
 
 def ionizer_simple(β, TEmap, xfel_spotsize, EB, electrons):
     """

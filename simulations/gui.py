@@ -1,5 +1,5 @@
 from streaking.gaussian_beam import SimpleGaussianBeam
-from streaking.ionization import ionizer_simple, naive_auger_generator
+from streaking.ionization import ionizer_simple, naive_auger_generator, ionizer_total_cs
 from streaking.conversions import cartesian_to_spherical, spherical_to_cartesian, ellipticity_to_jones_vector
 from streaking.streak import classical_lorentz_streaker, dumb_streaker
 from streaking.multivariate_map_interpolator import MultivariateMapInterpolator
@@ -25,7 +25,7 @@ if __name__ == '__main__':
     spe = None
     # Fraction of cut-off values in otherwise unbounded histograms 
     discard = 0.01
-    dpi = 150
+    dpi = 75
     fig = plt.figure(constrained_layout=False, figsize=(1920/dpi, 1080/dpi), dpi=dpi)
     gs = gridspec.GridSpec(2, 2, width_ratios=[1, 8], height_ratios=[1, 6], figure=fig, hspace=0.15, left=0.07, right=0.99, top=0.95, bottom=0.05)
 
@@ -103,9 +103,14 @@ if __name__ == '__main__':
     def update_electrons(val):
         global pe, spe
         N_G = int(sliders['XFEL']['peaks'].val)
-        N_e = int(sliders['target']['photoelectrons'].val)
+        #N_e = int(sliders['target']['photoelectrons'].val)
         E_ionize = sliders['target']['PE binding E / eV'].val  # eV
         β = sliders['target']['β'].val
+
+        xfelE = sliders['XFEL']['pulse energy / J'].val
+        xfelSpot = sliders['XFEL']['focal spot / m'].val
+        targetLen = sliders['target']['length / m'].val
+        targetDen = sliders['target']['number density·cm³'].val
 
         start = time.perf_counter()
 
@@ -138,7 +143,8 @@ if __name__ == '__main__':
             covs = covariance_from_correlation_2d(np.stack((sigma_t, sigma_E)), corr_list).T
             TEmap = MultivariateMapInterpolator.from_gauss_blob_list(np.stack((mu_t, mu_E)).T, covs, I_list)
 
-            pe = ionizer_simple(β, TEmap, sliders['XFEL']['focal spot / m'].val, E_ionize, N_e)
+            pe = ionizer_total_cs('Ne1s', TEmap, xfelE, xfelSpot, targetLen, targetDen)
+            #pe = ionizer_simple(β, TEmap, sliders['XFEL']['focal spot / m'].val, E_ionize, N_e)
             #pe = ionizer_Sauter(TEmap, E_ionize, N_e)
             imdata = TEmap.map.T
             imextent = TEmap.domain.flatten()
@@ -297,6 +303,7 @@ if __name__ == '__main__':
     # Sliders galore!
     sliders_spec = {
         'XFEL': {
+            'pulse energy / J':   (1e-4,    1e-3,  None,  1e-4,   None,    update_electrons),
             'peaks':              (1,       10,    1,     2,      '%1d',   update_electrons),
             'width (1pk) / s':    (1e-17,   15e-15,None,  8e-16,  None,    update_electrons),
             'µ(E) (1pk) / eV':    (800,     6000,  None,  1200,   '%.0f',  update_electrons),
@@ -306,9 +313,11 @@ if __name__ == '__main__':
             'focal spot / m':     (1e-6,    1e-4,  None,  2e-5,   None,    update_electrons),
         },
         'target': {
-            'photoelectrons':     (1e3,     5e5,   1,     1e5,    '%1d',   update_electrons),
+            #'photoelectrons':     (1e3,     5e5,   1,     1e5,    '%1d',   update_electrons),
+            'length / m':         (1e-2,    1e-1,  None,  1e-2,   None,    update_electrons),
+            'number density·cm³': (1e11,    1e15,  None,  1e11,   None,    update_electrons),
             'PE binding E / eV':  (500,     1500,  None,  1150,   '%.0f',  update_electrons),
-            'β':                  (-1,      2,     None,  2,      '%.2f',   update_electrons),
+            'β':                  (-1,      2,     None,  2,      '%.2f',  update_electrons),
             'Auger ratio':        (0,       1,     None,  0,      None,    update_electrons),
             'Auger lifetime / s': (1e-15,   1e-14, None,  22e-16, None,    update_electrons),
             'Auger KE / eV':      (50,      1000,  None,  60,    '%.1f',   update_electrons),
@@ -340,7 +349,7 @@ if __name__ == '__main__':
             r'ϑ center / rad':    (0,       np.pi,  None,  np.pi/2,'%1.2f',update_detector),
             r'φ bins':            (8,       64,     8,     32,    '%1d',   update_detector),
             r'ϑ bins':            (8,       64,     8,     32,    '%1d',   update_detector),
-            'z offset / m':       (-0.249,    0.249,    None,  0,     '%1.2f', update_detector),
+            'z offset / m':       (-0.249,  0.249,  None,  0,     '%1.2f', update_detector),
             'Y rotation / rad':   (-np.pi/2,np.pi/2,None,  0,     '%1.2f', update_detector),
             'X rotation / rad':   (-np.pi/2,np.pi/2,None,  0,     '%1.2f', update_detector),
         }
