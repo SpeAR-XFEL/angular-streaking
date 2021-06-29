@@ -71,6 +71,17 @@ class ClassicalElectrons:
         """
         return self.p / (const.m_e * self.gamma())
 
+    def cst_export(self, path):
+        """
+        Exports electrons in a format compatible to CST
+        """
+        mass = np.full_like(self.r[:, 0], const.m_e)
+        charge = np.full_like(self.r[:, 0], const.e)
+        current = np.full_like(self.r[:, 0], 1e-9)
+        # TODO: There's more efficient way for beta · gamma
+        data_to_save = (*self.r.T, *(self.v().T / const.c * self.gamma()[:, np.newaxis]), mass, charge, current)
+        np.savetxt(path, np.asarray(data_to_save).T)
+
     def __len__(self):
         """
         Returns the number of electrons in the object.
@@ -86,3 +97,6 @@ class ClassicalElectrons:
         self.p = np.concatenate((self.p, other.p))
         self.t0 = np.concatenate((self.t0, other.t0))
         return self
+
+    def __getitem__(self, index):
+        return ClassicalElectrons(self.r[index], self.p[index])
