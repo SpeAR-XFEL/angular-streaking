@@ -23,8 +23,7 @@ def _cylinder_intersection(electrons, radius, origin=(0, 0, 0), rotation=None):
     xpx = x * px + y * py
     d = (-2 * xpx + np.sqrt(4 * xpx ** 2 - 4 * psq * (rsq - radius ** 2))) / (2 * psq)
     intersection_point = er + d[:, None] * ep
-    #print((cartesian_to_spherical(*intersection_point.T))[(0, 2), :].shape)
-    return *cartesian_to_spherical(*intersection_point.T)[(0, 2), :], intersection_point[:, 2]
+    return *(cartesian_to_spherical(*intersection_point.T)[(0, 2), :]), intersection_point[:, 2]
 
 
 def _sphere_intersection(electrons, radius, origin=(0, 0, 0), rotation=None):

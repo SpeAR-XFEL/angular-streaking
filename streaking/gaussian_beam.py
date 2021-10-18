@@ -166,6 +166,9 @@ class SimpleGaussianBeam:
             + phase_offset
         )
 
+        #print(np.arctan(Zdif_x / self.zRx).min(), np.arctan(Zdif_x / self.zRx).max())
+        #print(self.zRx)
+
         E0 = central_E_field * offaxis_pulsed_factor
 
         E_field = np.zeros((phase.shape[0], 3))
