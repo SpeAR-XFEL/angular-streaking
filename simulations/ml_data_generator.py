@@ -50,7 +50,6 @@ def simulate(config):
         TEmap = MultivariateMapInterpolator.from_gauss_blob_list(np.stack((mu_t, mu_E)).T, covs, I_list)
 
         pe = ionizer_simple(pconf['target']['beta'], TEmap, pconf['xfel']['focal size'], binding_energy, number_of_electrons)
-        # ionizer_simple(, , )
     # elif pconf['xfel pulse generator'] == 'gaussian':
     #    pe = ionizer_simple(2, (0, 1e3), ((1e-15, 0), (0, 5)), 870, 1e-6, number_of_electrons)
     else:
@@ -73,7 +72,8 @@ def simulate(config):
     streaked_pe, kick = dumb_streaker(pe, streaking_beam, return_A_kick=True)
     hist, x, y = constant_polar_angle_ring(streaked_pe, pconf['detector']['theta center'], pconf['detector']['theta acceptance'], pconf['detector']['phi bins'], pconf['detector']['radius'], pconf['detector']['variable'], energy_bins)
 
-    spec, _, _ = np.histogram2d(pe.t0, pe.Ekin() / const.e, bins=(t_bins, energy_bins))
+    spec, _, _ = np.histogram2d(pe.t0 - pe.r[:, 2] / const.c, pe.Ekin() / const.e, bins=(t_bins, energy_bins))
+    # Remove temporal spread again     ^^^^^^^^^^^^^^^^^^^^^^    I really do not like this solution, consider it temporary.
     timedist = np.sum(spec, axis=1)
     return hist.T / hist.max(), spec.T / spec.max(), kick * 1e25, timedist
 

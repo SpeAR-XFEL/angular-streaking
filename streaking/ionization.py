@@ -7,7 +7,7 @@ import scipy.interpolate
 
 
 def diff_cross_section_dipole(ϑ, φ, β):
-    return (1 + β * 1 / 2 * (3 * np.cos(ϑ) ** 2 - 1)) / 3
+    return (1 + β * 1 / 2 * (3 * np.cos(ϑ) ** 2 - 1)) / (β + 1)
 
 
 def diff_cross_section_1st_nondipole(ϑ, φ, β, Δβ, δ, ɣ, λ, µ, ν):
