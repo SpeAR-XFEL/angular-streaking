@@ -76,7 +76,7 @@ class ClassicalElectrons:
         Exports electrons in a format compatible to CST
         """
         mass = np.full_like(self.r[:, 0], const.m_e)
-        charge = np.full_like(self.r[:, 0], const.e)
+        charge = np.full_like(self.r[:, 0], -const.e)
         current = np.full_like(self.r[:, 0], 1e-9)
         # TODO: There's more efficient way for beta · gamma
         data_to_save = (*self.r.T, *(self.v().T / const.c * self.gamma()[:, np.newaxis]), mass, charge, current)
