@@ -5,7 +5,7 @@ Prerequisites: Git, [Poetry](https://python-poetry.org/docs/)
 First, clone the repository (go to the directory you want the project to be in):
 
 ```
-git clone git@github.com:larsfu/angular_streaking.git
+git clone git@github.com:SpeAR-XFEL/angular_streaking.git
 ```
 
 Optionally, set poetry to create the Python virtual environment inside the project folder (this allows IDEs like VS Code to find it):
