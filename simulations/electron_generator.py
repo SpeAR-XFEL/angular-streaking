@@ -15,7 +15,7 @@ if __name__ == "__main__":
     cone_angle = np.deg2rad(6.4)  # np.deg2rad(1.946572802)
     # E = np.random.uniform(50, 150, n) * const.e
     energy_steps = np.arange(1450, 1550, 1)
-    E = np.concatenate([np.full(n // len(energy_steps), i) for i in energy_steps]) * const.e
+    E = np.repeat(energy_steps, n // len(energy_steps)) * const.e
     px, py, pz = rejection_sampling_spherical(pdf, n, params=(cone_angle,))
     r = np.random.multivariate_normal((0, 0, 0), focus**2 * np.eye(3), n)
     p = np.vstack((pz, py, px)).T
