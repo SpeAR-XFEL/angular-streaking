@@ -331,7 +331,7 @@ class RoundGaussianBeam:
 
         # Position of the laser pulse center
         Zlas = const.c * (t + self.envelope_offset)
-        P = self.P0*np.exp(-((z-Zlas)/(2*self.sigma_z))**2)
+        P = self.P0*np.exp(-1/2 * ((z-Zlas)/self.sigma_z)**2)
         
         R = Zdif + (self.zR ** 2 / Zdif)
         gouy = np.arctan(Zdif / self.zR)
@@ -502,7 +502,7 @@ class AstigmaticGaussianBeam:
         q1 = Zdif_1 + 1j * self.zR1
         q2 = Zdif_2 + 1j * self.zR2
         
-        P = self.P0*np.exp(-((z-Zlas)/(2*self.sigma_z))**2)
+        P = self.P0*np.exp(-1/2 * ((z-Zlas)/self.sigma_z)**2)
         
         gouy = - (np.arctan(Zdif_1 / self.zR1) + np.arctan(Zdif_2 / self.zR2)) / 2
         
