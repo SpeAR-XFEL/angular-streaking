@@ -20,13 +20,13 @@ class SimpleGaussianBeam:
     def __init__(
         self,
         focal_point=(0, 0),
-        focal_size=(500e-6 / 2.3548, 500e-6 / 2.3548),
+        focal_size=(200e-6, 200e-6),
         envelope_offset=0,
         cep=0,
-        wavelength=10e-6,
+        wavelength=800e-9,
         M2=1.0,
-        energy=30 * 1e-6,
-        duration=300e-15,
+        energy=1e-3,
+        duration=50e-15,
         polarization=(np.sqrt(2), 1j * np.sqrt(2)),
         origin=(0, 0, 0),
         rotation=None,
@@ -347,6 +347,178 @@ class RoundGaussianBeam:
 
         return E_amplitude, E_phase
 
+    def __iadd__(self, other):
+        """
+        Allows you to add another beam to this one, from then on the fields method will
+        calculate the superposition of both. Cascading works.
+
+        Parameters
+        ----------
+        other : SimpleGaussianBeam
+            Other beam object for superposition
+
+        Returns
+        -------
+        newbeam : SimpleGaussianBeam
+            New beam object that provides the superposition of the passed beams.
+        """
+        self.other_beams_list.append(other)
+        return self
+
+
+class RoundGaussianBeamCircular:
+    """Calculates electric and magnetic field of a simple round
+    gaussian laser beam on the z axis.
+
+    Methods
+    -------
+    fields(self, x, y, z, t)
+        Calculates the electric and magnetic fields of the gaussian beam
+        at every given position and time.
+
+    __add__(self, other)
+        Allows you to add two beams, the resulting beam object will calculate
+        the fields for the superposition of both beam objects.
+    """
+
+    def __init__(
+        self,
+        focal_point=0,
+        focal_size=200e-6,
+        envelope_offset=0,
+        cep=0,
+        wavelength=800e-9,
+        M2=1.0,
+        energy=1e-3,
+        duration=50e-15,
+        polarization=(np.sqrt(2), 1j * np.sqrt(2)),
+        transverse_offset=(0,0)
+    ):
+        """
+        Parameters
+        ----------
+        focal_point : scalar
+            Longitudinal coordinate of focal point.
+        focal_size : scalar
+            Focal size (standard deviaton) in the transverse plane.
+        envelope_offset : scalar
+            Time offset of the envelope. An offset of zero means the
+            envelope’s maximum is at the origin.
+        cep : scalar
+            Carrier-envelope phase. A phase of zero means the electric
+            field’s maximum is at the maximum of the envelope.
+        wavelength : scalar
+            Beam wavelength.
+        M2 : scalar
+            beam quality factor. One means ideal Gaussian beam.
+        energy : scalar
+            Pulse energy in Joules.
+        duration : scalar
+            FWHM pulse duration in seconds.
+        polarization : float
+            angle of linear polarization axis, 0 = horizontal polarization
+        transverse_offset : float
+            tuple of horizontal and vertical parallel offset to the beam axis
+        """
+
+        self.focal_point = focal_point
+        self.cep = cep
+        self.wavelength = wavelength
+        self.energy = energy
+        # FWHM -> sigma for Gaussian distribution
+        self.sigma_t = duration / 2.3548
+        self.w0 = 2 * focal_size
+        self.k = 2 * np.pi / wavelength  # wavenumber in 1/m
+        self.omega = 2 * np.pi * const.c / wavelength  # angular frequency in rad/s
+        self.sigma_z = self.sigma_t * const.c # sigma width of pulse length in m
+        # horizontal Rayleigh length in m
+        self.zR = np.pi * self.w0 ** 2 / (M2 * wavelength)
+
+        self.P0 = self.energy * const.c/self.sigma_z / np.sqrt(2*np.pi)
+
+        self.envelope_offset = envelope_offset
+        self.polarization = polarization
+        self.transverse_offset = transverse_offset
+        self.other_beams_list = []
+
+    def field(self, x, y, z, t, phase_offset=0):
+        """Calculates the electric field of the gaussian beam
+        at every given position and time.
+
+        Parameters
+        ----------
+        x : array_like
+            x coordinates.
+        y : array_like
+            y coordinates.
+        z : array_like
+            z coordinates.
+        t : array_like or scalar
+            Time. Either defined for each set of x,y,z or scalar.
+
+        Returns
+        -------
+        E : (..., 3) array_like
+            Electric field vectors.
+        """
+        E0, phase = self._E0_and_phase(x-self.transverse_offset[0], y-self.transverse_offset[1], z, t, phase_offset)
+
+        # TODO: Implement Stokes vector.
+        
+        E_field = np.zeros((phase.shape[0], 3))
+        # Correct for phase shift introduced by Jones vector
+        # => For t = 0, E _always_ points to +x
+        phase -= np.angle(self.polarization[1]) - np.pi / 2
+
+        E_field[:, (0, 1)] = E0[:, None] * np.real(
+            self.polarization * np.exp(1j * phase[:, None])
+        )        
+
+        for otherbeam in self.other_beams_list:
+            E = otherbeam.field(x, y, z, t)
+            E_field += E
+        return E_field
+
+    def _E0_and_phase(self, x, y, z, t, phase_offset):
+        x = np.asarray(x)
+        y = np.asarray(y)
+        z = np.asarray(z)
+        assert x.shape == y.shape == z.shape
+        t = np.asarray(t)
+        #assert t.shape == () or t.shape == x.shape
+
+        # Distance of electron to focus (mod1_center)
+        Zdif = z - self.focal_point
+
+        # horizontal beam sizes w_{x,y} at position z in m
+        w = self.w0 * np.sqrt(1 + Zdif ** 2 / (self.zR ** 2))
+
+
+        # Position of the laser pulse center
+        Zlas = const.c * (t + self.envelope_offset)
+        P = self.P0*np.exp(-1/2 * ((z-Zlas)/self.sigma_z)**2)
+        
+        R = Zdif + (self.zR ** 2 / Zdif)
+        gouy = np.arctan(Zdif / self.zR)
+        
+        factor=np.sqrt(4 * P / (const.epsilon_0 * const.c * np.pi)) / w
+        exponent = -(x**2 + y**2)/w**2 + 1j * ( self.k * (z - self.envelope_offset * const.c) - 
+                                               self.omega * t - gouy + self.k * (x**2 + y**2)/(2*R))
+
+        
+        
+        E_amplitude = factor * np.exp(np.real(exponent))
+        E_phase = np.imag(exponent) + phase_offset
+
+        return E_amplitude, E_phase
+
+    def vector_potential(self, x, y, z, t):
+        E_field = self.field(x, y, z, t, phase_offset=-np.pi / 2)
+        A = -E_field / self.omega
+    
+        for otherbeam in self.other_beams_list:
+            A += otherbeam.vector_potential(x, y, z, t)
+        return A
     def __iadd__(self, other):
         """
         Allows you to add another beam to this one, from then on the fields method will
