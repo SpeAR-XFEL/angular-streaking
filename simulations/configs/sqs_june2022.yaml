@@ -1,14 +1,14 @@
 ---
 laser:
-    focal size x: 50e-6  # m
-    focal size y: 50e-6  # m
+    focal size x: 64e-6  # m, sigma
+    focal size y: 64e-6  # m, sigma
     wavelength: 4.7e-6  # m
-    pulse energy: 10e-6  # J
-    pulse duration: 300e-15  # s
-    delay: {random: uniform, args: [-450e-15, 450e-15]}  # s
+    pulse energy: 7e-6  # J
+    pulse duration: 150e-15  # s, FWHM
+    delay: {random: uniform, args: [-100e-15, 0e-15]}  # s
     cep: {random: uniform, args: [-3.14159265, 3.14159265]}  # rad
-    ellipticity: 1  # 1: circular, 0: linear
-    tilt: 0  # rad
+    ellipticity: {random: uniform, args: [0.7, 1]}  # 1: circular, 0: linear
+    tilt: {random: uniform, args: [0, 3.14159265]}  # rad
 xfel: 
     focal size: 2e-5  # m
 detector:
