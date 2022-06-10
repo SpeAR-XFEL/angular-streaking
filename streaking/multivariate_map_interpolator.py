@@ -35,10 +35,16 @@ class MultivariateMapInterpolator:
         self.interp = si.RegularGridInterpolator(self.ranges, self.map, bounds_error=False, method='nearest')
 
     @classmethod
-    def from_image(cls, path, domain):
+    def from_file(cls, path, domain):
         im = np.rot90(plt.imread(path), k=-1)
         interpolator = cls(domain, im.shape)
         interpolator.add_arbitrary(im)
+        return interpolator
+
+    @classmethod
+    def from_array(cls, array, domain):
+        interpolator = cls(domain, array.shape)
+        interpolator.add_arbitrary(array)
         return interpolator
 
     @classmethod

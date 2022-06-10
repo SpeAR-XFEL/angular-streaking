@@ -1,0 +1,27 @@
+---
+laser:
+    focal size x: 50e-6  # m
+    focal size y: 50e-6  # m
+    wavelength: 4.7e-6  # m
+    pulse energy: 10e-6  # J
+    pulse duration: 300e-15  # s
+    delay: {random: uniform, args: [-450e-15, 450e-15]}  # s
+    cep: {random: uniform, args: [-3.14159265, 3.14159265]}  # rad
+    ellipticity: 1  # 1: circular, 0: linear
+    tilt: 0  # rad
+xfel: 
+    focal size: 2e-5  # m
+detector:
+    type: flight tubes
+    tip distance: 35e-3
+    tip diameter: 20e-3
+    mcp distance: 300e-3
+    mcp diameter: 1
+    angles: [180.0, 156.6, 134.4, 123.3, 112.2, 67.8, 56.7, 45.6, 34.5, 11.1, 0.0, 348.9, 292.2, 281.1, 247.8, 203.4] # degrees
+    energy bins: [90, 170, 160]  # eV, linspace
+    variable: kinetic energy  # kinetic energy or momentum
+target:
+    beta: 2
+    number of electrons: 100000
+    binding energy: 870.2  # eV
+    length: 1e-2 # m
