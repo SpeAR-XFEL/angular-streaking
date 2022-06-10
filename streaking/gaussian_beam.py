@@ -153,7 +153,7 @@ class SimpleGaussianBeam:
 
         central_E_field = self.E0 * self.w0_x / w_x
         offaxis_pulsed_factor = np.exp(
-            - y ** 2 / (2 * (w_y/2)**2) - x**2 / (2 * (w_x/2) ** 2) - (z - Zlas) / (2 * self.sigma_z **2 ) 
+            - y ** 2 / (2 * (w_y/2)**2) - x**2 / (2 * (w_x/2) ** 2) - (z - Zlas) ** 2 / (2 * self.sigma_z **2 ) 
         )
         phase = (
             self.k * (z - self.envelope_offset * const.c)
