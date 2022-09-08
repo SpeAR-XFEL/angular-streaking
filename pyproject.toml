@@ -5,7 +5,7 @@ description = ""
 authors = ["Lars Funke <lars.funke@tu-dortmund.de>", "Arne Held <arne.held@tu-dortmund.de>"]
 
 [tool.poetry.dependencies]
-python = "^3.8,<3.10"
+python = "^3.8,<3.11"
 numpy = "^1.20.2"
 matplotlib = "^3.4.1"
 "ruamel.yaml" = "^0.17.4"
@@ -17,6 +17,7 @@ PyQt5 = "^5.15.4"
 [tool.poetry.dev-dependencies]
 flake8 = "^3.9.0"
 black = {version = "^20.8b1", allow-prereleases = true}
+yapf = "^0.32.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
