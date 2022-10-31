@@ -11,7 +11,7 @@ def dumb_streaker(electrons, beam, dumb=True, return_A_kick=False):
     A = beam.vector_potential(*electrons.r.T, electrons.t0)
     electrons = ClassicalElectrons(electrons.r, electrons.p + const.e * A)
     if return_A_kick:
-        return electrons, np.linalg.norm(A, axis=1).max() * const.e
+        return electrons, np.linalg.norm(A, axis=1).mean() * const.e
     else:
         return electrons
 
